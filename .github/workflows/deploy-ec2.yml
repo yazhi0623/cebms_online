@@ -20,6 +20,7 @@ jobs:
     env:
       DEPLOY_COMPOSE_FILE: docker-compose.prod.image-based.yml
       DEPLOY_HEALTH_URL: http://127.0.0.1/health
+      DEPLOY_HEALTH_HOST: 52.77.76.22
 
     steps:
       - name: Checkout repository
@@ -113,4 +114,4 @@ jobs:
             docker compose --env-file .env.prod -f "${{ env.DEPLOY_COMPOSE_FILE }}" down --remove-orphans || true
             docker compose --env-file .env.prod -f "${{ env.DEPLOY_COMPOSE_FILE }}" pull
             docker compose --env-file .env.prod -f "${{ env.DEPLOY_COMPOSE_FILE }}" up -d
-            curl --fail --silent "${{ env.DEPLOY_HEALTH_URL }}"
+            curl --fail --silent -H "Host: ${{ env.DEPLOY_HEALTH_HOST }}" "${{ env.DEPLOY_HEALTH_URL }}"
