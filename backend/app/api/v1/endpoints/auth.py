@@ -2,6 +2,7 @@
 
 from app.api.deps import CurrentUser
 from app.api.deps.services import AuthServiceDep
+from app.api.request_utils import get_client_ip
 from app.models.user import User
 from app.schemas.user import RefreshTokenRequest, Token, UserCreate, UserLogin, UserRead
 
@@ -17,8 +18,7 @@ def register(user_in: UserCreate, service: AuthServiceDep) -> User:
 @router.post("/login", response_model=Token)
 def login(user_in: UserLogin, request: Request, service: AuthServiceDep) -> Token:
     """校验账号密码并返回访问令牌和刷新令牌。"""
-    client_host = request.client.host if request.client else "unknown"
-    return service.login(user_in, client_key=client_host)
+    return service.login(user_in, client_key=get_client_ip(request))
 
 
 @router.get("/me", response_model=UserRead)

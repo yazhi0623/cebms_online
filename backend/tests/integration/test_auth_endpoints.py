@@ -115,3 +115,35 @@ def test_login_rate_limit_blocks_repeated_failures(client: TestClient, monkeypat
 
     assert blocked_response.status_code == 429
     assert blocked_response.json()["detail"] == "Too many login attempts, please try again later"
+
+
+def test_login_rate_limit_uses_forwarded_client_ip(client: TestClient, monkeypatch) -> None:
+    from app.core.config import settings
+
+    monkeypatch.setattr(settings, "AUTH_LOGIN_RATE_LIMIT_ATTEMPTS", 3)
+    client.post(
+        "/api/v1/auth/register",
+        json={"username": "proxy_user", "password": "right_pass_123"},
+    )
+
+    for _ in range(3):
+        response = client.post(
+            "/api/v1/auth/login",
+            json={"username": "proxy_user", "password": "wrong_pass_123"},
+            headers={"X-Forwarded-For": "198.51.100.10, 10.0.0.2"},
+        )
+        assert response.status_code == 401
+
+    blocked_response = client.post(
+        "/api/v1/auth/login",
+        json={"username": "proxy_user", "password": "right_pass_123"},
+        headers={"X-Forwarded-For": "198.51.100.10, 10.0.0.2"},
+    )
+    assert blocked_response.status_code == 429
+
+    allowed_response = client.post(
+        "/api/v1/auth/login",
+        json={"username": "proxy_user", "password": "right_pass_123"},
+        headers={"X-Forwarded-For": "203.0.113.25, 10.0.0.2"},
+    )
+    assert allowed_response.status_code == 200
