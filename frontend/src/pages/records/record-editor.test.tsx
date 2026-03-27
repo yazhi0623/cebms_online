@@ -106,9 +106,24 @@ describe("RecordEditor", () => {
 
     expect(screen.getByRole("button", { name: "取消默认模板" })).toBeInTheDocument();
   });
+
   it("focuses title input when the focus signal changes", () => {
     render(<RecordEditor {...buildProps({ templateMenuOpen: false, titleFocusSignal: 1 })} />);
 
     expect(screen.getByPlaceholderText("请输入记录标题")).toHaveFocus();
+  });
+
+  it("uses pressable button styling for editor actions", () => {
+    render(
+      <RecordEditor
+        {...buildProps({
+          templateMenuOpen: false,
+          selectedRecord: { id: 1 },
+        })}
+      />,
+    );
+
+    expect(screen.getByRole("button", { name: "删除" }).className).toContain("shell__nav-button--pressable");
+    expect(screen.getByRole("button", { name: "保存" }).className).toContain("shell__nav-button--pressable");
   });
 });

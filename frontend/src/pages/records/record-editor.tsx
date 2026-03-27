@@ -89,6 +89,7 @@ export function RecordEditor({
   const [templateSelectWidth, setTemplateSelectWidth] = useState(156);
   const [templateMenuDirection, setTemplateMenuDirection] = useState<"down" | "up">("down");
   const [templateMenuMaxHeight, setTemplateMenuMaxHeight] = useState<number | null>(null);
+  const isSaving = editorMode === "template" ? savingTemplate : savingRecord;
 
   useLayoutEffect(() => {
     if (!templateTriggerRef.current) {
@@ -236,7 +237,7 @@ export function RecordEditor({
           <div className="editor-footer__actions">
             {(selectedRecord || (editorMode === "template" && selectedTemplate && !creatingTemplate)) ? (
               <button
-                className="shell__nav-button"
+                className="shell__nav-button shell__nav-button--pressable editor-footer__action-button"
                 disabled={editorMode === "template" ? deletingTemplate : deletingRecord}
                 onClick={editorMode === "template" ? onDeleteTemplate : onDeleteRecord}
                 type="button"
@@ -246,7 +247,7 @@ export function RecordEditor({
             ) : null}
             {editorMode === "template" && !templateDefaultDraft ? (
               <button
-                className="shell__nav-button"
+                className="shell__nav-button shell__nav-button--pressable editor-footer__action-button"
                 disabled={savingTemplate}
                 onClick={onSaveTemplateAsDefault}
                 type="button"
@@ -256,7 +257,7 @@ export function RecordEditor({
             ) : null}
             {editorMode === "template" && templateDefaultDraft && selectedTemplate && !creatingTemplate ? (
               <button
-                className="shell__nav-button"
+                className="shell__nav-button shell__nav-button--pressable editor-footer__action-button"
                 disabled={savingTemplate}
                 onClick={onCancelDefaultTemplate}
                 type="button"
@@ -265,8 +266,8 @@ export function RecordEditor({
               </button>
             ) : null}
             <button
-              className="shell__nav-button shell__nav-button--active"
-              disabled={editorMode === "template" ? savingTemplate : savingRecord}
+              className="shell__nav-button shell__nav-button--active shell__nav-button--pressable editor-footer__action-button"
+              disabled={isSaving}
               onClick={editorMode === "template" ? onSaveTemplate : onSaveRecord}
               type="button"
             >

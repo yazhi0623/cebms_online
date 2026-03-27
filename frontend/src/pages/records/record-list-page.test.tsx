@@ -98,6 +98,7 @@ describe("RecordListPage", () => {
 
     await user.click(screen.getByRole("button", { name: "展开模板列表" }));
     await user.click(screen.getAllByRole("button", { name: "新增" })[1]);
+    await user.click(screen.getByRole("button", { name: "舍弃" }));
     await user.type(screen.getByPlaceholderText("请输入模板标题"), "新的模板草稿");
     await user.click(screen.getAllByRole("button", { name: "新增" })[1]);
 

@@ -128,10 +128,30 @@ textarea {
   color: #fff6ef;
 }
 
+.shell__nav-button--pressable:not(:disabled):active {
+  transform: translateY(1px) scale(0.98);
+  background: rgba(104, 73, 51, 0.14);
+  box-shadow: inset 0 0 0 1px rgba(104, 73, 51, 0.12);
+}
+
+.shell__nav-button--active.shell__nav-button--pressable:not(:disabled):active {
+  background: #81604a;
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 246, 239, 0.18),
+    inset 0 2px 6px rgba(60, 41, 28, 0.2);
+}
+
 .shell__nav-button--pressed {
   transform: translateY(1px) scale(0.98);
   background: rgba(104, 73, 51, 0.14);
   box-shadow: inset 0 0 0 1px rgba(104, 73, 51, 0.12);
+}
+
+.shell__nav-button--active.shell__nav-button--pressed {
+  background: #81604a;
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 246, 239, 0.18),
+    inset 0 2px 6px rgba(60, 41, 28, 0.2);
 }
 
 .shell__content {
@@ -1129,6 +1149,11 @@ textarea {
   gap: 10px;
 }
 
+.confirm-actions .shell__nav-button {
+  min-width: 88px;
+  justify-content: center;
+}
+
 .record-editor-shell__content {
   margin: 0;
   white-space: pre-wrap;
@@ -1173,7 +1198,10 @@ textarea {
   padding: 10px 14px;
   font-size: 18px;
   border-radius: 12px;
-  border-color: #9a8674;
+  border: 1px solid #9a8674;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.88);
+  appearance: none;
 }
 
 .editor-form__field {
@@ -1401,6 +1429,14 @@ textarea {
   flex-wrap: wrap;
   justify-content: flex-end;
   gap: 10px;
+}
+
+.editor-footer__action-button {
+  min-width: 108px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
 }
 
 .template-sidebar-shell {

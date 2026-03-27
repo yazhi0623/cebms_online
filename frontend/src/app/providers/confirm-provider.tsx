@@ -64,10 +64,14 @@ export function ConfirmProvider({ children }: PropsWithChildren) {
           <div aria-modal="true" className="confirm-dialog" role="dialog">
             <p className="confirm-message">{state.message}</p>
             <div className="confirm-actions">
-              <button className="shell__nav-button" onClick={() => close(false)} type="button">
+              <button className="shell__nav-button shell__nav-button--pressable" onClick={() => close(false)} type="button">
                 {state.cancelLabel}
               </button>
-              <button className="shell__nav-button shell__nav-button--active" onClick={() => close(true)} type="button">
+              <button
+                className="shell__nav-button shell__nav-button--active shell__nav-button--pressable"
+                onClick={() => close(true)}
+                type="button"
+              >
                 {state.confirmLabel}
               </button>
             </div>
