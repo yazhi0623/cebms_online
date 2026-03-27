@@ -1,0 +1,64 @@
+backup/
+docs/
+infra/
+temp/
+generated/
+*.pyc
+*.pyo
+*.pyd
+*$py.class
+**/.pytest_tmp_*/
+pytest-cache-files-*/
+AI合作改代码
+README.md
+
+# --- 系统/IDE 垃圾 (预防权限占用报错) ---
+.idea/
+.vscode/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.swp
+Thumbs.db
+.DS_Store
+
+# --- 前端 (Frontend) 垃圾 ---
+node_modules/
+dist/
+build/
+.cache/
+.eslintcache
+# 保护你的 API 密钥
+.env
+! .env.example
+
+# --- 后端 (Python) 垃圾 (重点清理对象) ---
+__pycache__/
+**/__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.venv/
+venv/
+env/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# --- 本地配置/日志 ---
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
