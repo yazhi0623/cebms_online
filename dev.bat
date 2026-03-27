@@ -2,7 +2,8 @@
 chcp 65001 >nul
 setlocal
 
-set PROJECT_DIR=E:\cebms_dev
+set PROJECT_DIR=%~dp0
+set PROJECT_DIR=%PROJECT_DIR:~0,-1%
 set BACKEND_DIR=%PROJECT_DIR%\backend
 set FRONTEND_DIR=%PROJECT_DIR%\frontend
 set POSTGRES_CONTAINER=cebms-postgres

@@ -4,6 +4,8 @@ import { formatDate } from "./record-workspace-utils";
 type TemplateSidebarProps = {
   currentUserName?: string;
   isCollapsed: boolean;
+  newButtonPressed: boolean;
+  onNewTemplatePressStart: () => void;
   onNewTemplate: () => void;
   onSelectTemplate: (templateId: number) => void;
   onToggleCollapsed: () => void;
@@ -16,6 +18,8 @@ type TemplateSidebarProps = {
 export function TemplateSidebar({
   currentUserName,
   isCollapsed,
+  newButtonPressed,
+  onNewTemplatePressStart,
   onNewTemplate,
   onSelectTemplate,
   onToggleCollapsed,
@@ -43,7 +47,17 @@ export function TemplateSidebar({
             <h2 className="record-sidebar__title">模板列表</h2>
           </div>
           <div className="sidebar-header-actions">
-            <button className="shell__nav-button" onClick={onNewTemplate} type="button">
+            <button
+              className={newButtonPressed ? "shell__nav-button shell__nav-button--pressed" : "shell__nav-button"}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" || event.key === " ") {
+                  onNewTemplatePressStart();
+                }
+              }}
+              onClick={onNewTemplate}
+              onPointerDown={onNewTemplatePressStart}
+              type="button"
+            >
               新增
             </button>
           </div>

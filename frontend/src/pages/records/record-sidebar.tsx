@@ -10,6 +10,8 @@ type RecordSidebarProps = {
   error: string | null;
   filteredRecords: RecordItem[];
   isDemoMode: boolean;
+  newButtonPressed: boolean;
+  onNewRecordPressStart: () => void;
   onNewRecord: () => void;
   onSearchDraftChange: (value: string) => void;
   onSearchSubmit: () => void;
@@ -32,6 +34,8 @@ export function RecordSidebar({
   error,
   filteredRecords,
   isDemoMode,
+  newButtonPressed,
+  onNewRecordPressStart,
   onDeleteSelected,
   onNewRecord,
   onSearchDraftChange,
@@ -53,7 +57,17 @@ export function RecordSidebar({
           <h2 className="record-sidebar__title">记录列表</h2>
         </div>
         <div className="sidebar-header-actions">
-          <button className="shell__nav-button" onClick={onNewRecord} type="button">
+          <button
+            className={newButtonPressed ? "shell__nav-button shell__nav-button--pressed" : "shell__nav-button"}
+            onKeyDown={(event) => {
+              if (event.key === "Enter" || event.key === " ") {
+                onNewRecordPressStart();
+              }
+            }}
+            onClick={onNewRecord}
+            onPointerDown={onNewRecordPressStart}
+            type="button"
+          >
             新增
           </button>
         </div>

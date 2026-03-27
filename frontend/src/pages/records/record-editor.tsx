@@ -27,6 +27,7 @@ type RecordEditorProps = {
   templateTriggerLabel: string;
   templates: TemplateItem[];
   titleDraft: string;
+  titleFocusSignal: number;
   onContentDraftChange: (value: string) => void;
   onDeleteRecord: () => void;
   onDeleteTemplate: () => void;
@@ -66,6 +67,7 @@ export function RecordEditor({
   templateTriggerLabel,
   templates,
   titleDraft,
+  titleFocusSignal,
   onContentDraftChange,
   onDeleteRecord,
   onDeleteTemplate,
@@ -82,6 +84,7 @@ export function RecordEditor({
   // 下拉按钮宽度根据真实文本宽度计算，避免中文标题在 `ch` 估算下出现对齐偏差。
   const hasError = (editorMode === "template" && templateError) || (editorMode === "record" && editorError);
   const templateTriggerRef = useRef<HTMLButtonElement | null>(null);
+  const titleInputRef = useRef<HTMLInputElement | null>(null);
   const templateOptionsRef = useRef<HTMLDivElement | null>(null);
   const [templateSelectWidth, setTemplateSelectWidth] = useState(156);
   const [templateMenuDirection, setTemplateMenuDirection] = useState<"down" | "up">("down");
@@ -112,6 +115,14 @@ export function RecordEditor({
     const nextWidth = Math.min(Math.max(Math.ceil(widestLabel + 54), 156), 320);
     setTemplateSelectWidth(nextWidth);
   }, [templateTriggerLabel, templates]);
+
+  useLayoutEffect(() => {
+    if (!titleFocusSignal) {
+      return;
+    }
+
+    titleInputRef.current?.focus();
+  }, [titleFocusSignal]);
 
   useLayoutEffect(() => {
     if (!templateMenuOpen || !templateTriggerRef.current || !templateOptionsRef.current) {
@@ -148,6 +159,7 @@ export function RecordEditor({
           <label className="editor-title-row">
             <span>标题</span>
             <input
+              ref={titleInputRef}
               onChange={(event) =>
                 editorMode === "template"
                   ? onTemplateTitleDraftChange(event.target.value)

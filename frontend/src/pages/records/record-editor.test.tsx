@@ -53,6 +53,7 @@ function buildProps(overrides: Partial<ComponentProps<typeof RecordEditor>> = {}
     templateTriggerLabel: "导入模板",
     templates,
     titleDraft: "",
+    titleFocusSignal: 0,
     onContentDraftChange: vi.fn(),
     onDeleteRecord: vi.fn(),
     onDeleteTemplate: vi.fn(),
@@ -104,5 +105,10 @@ describe("RecordEditor", () => {
     );
 
     expect(screen.getByRole("button", { name: "取消默认模板" })).toBeInTheDocument();
+  });
+  it("focuses title input when the focus signal changes", () => {
+    render(<RecordEditor {...buildProps({ templateMenuOpen: false, titleFocusSignal: 1 })} />);
+
+    expect(screen.getByPlaceholderText("请输入记录标题")).toHaveFocus();
   });
 });

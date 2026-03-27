@@ -12,6 +12,8 @@ export function RecordListPage() {
   const [templateSidebarCollapsed, setTemplateSidebarCollapsed] = useState(true);
   const [compactLayout, setCompactLayout] = useState(false);
   const [compactPanel, setCompactPanel] = useState<"records" | "templates" | null>(null);
+  const [recordNewButtonPressed, setRecordNewButtonPressed] = useState(false);
+  const [templateNewButtonPressed, setTemplateNewButtonPressed] = useState(false);
 
   useEffect(() => {
     const compactMediaQuery = window.matchMedia("(orientation: portrait), (max-width: 1180px)");
@@ -49,18 +51,30 @@ export function RecordListPage() {
     }
   }
 
+  function flashRecordNewButton() {
+    setRecordNewButtonPressed(true);
+    window.setTimeout(() => setRecordNewButtonPressed(false), 160);
+  }
+
+  function flashTemplateNewButton() {
+    setTemplateNewButtonPressed(true);
+    window.setTimeout(() => setTemplateNewButtonPressed(false), 160);
+  }
+
   function handleNewRecord() {
-    workspace.handleNewRecord();
-    if (compactLayout) {
-      setCompactPanel(null);
-    }
+    void workspace.handleNewRecord().then((didSwitch) => {
+      if (compactLayout && didSwitch) {
+        setCompactPanel(null);
+      }
+    });
   }
 
   function handleNewTemplate() {
-    workspace.handleNewTemplate();
-    if (compactLayout) {
-      setCompactPanel(null);
-    }
+    void workspace.handleNewTemplate().then((didSwitch) => {
+      if (compactLayout && didSwitch) {
+        setCompactPanel(null);
+      }
+    });
   }
 
   return (
@@ -101,7 +115,9 @@ export function RecordListPage() {
             error={workspace.error}
             filteredRecords={workspace.filteredRecords}
             isDemoMode={workspace.isDemoMode}
+            newButtonPressed={recordNewButtonPressed}
             onDeleteSelected={() => void workspace.handleDeleteSelectedRecords()}
+            onNewRecordPressStart={flashRecordNewButton}
             onNewRecord={handleNewRecord}
             onSearchDraftChange={workspace.setSearchDraft}
             onSearchSubmit={workspace.handleSearchSubmit}
@@ -126,7 +142,9 @@ export function RecordListPage() {
               error={workspace.error}
               filteredRecords={workspace.filteredRecords}
               isDemoMode={workspace.isDemoMode}
+              newButtonPressed={recordNewButtonPressed}
               onDeleteSelected={() => void workspace.handleDeleteSelectedRecords()}
+              onNewRecordPressStart={flashRecordNewButton}
               onNewRecord={handleNewRecord}
               onSearchDraftChange={workspace.setSearchDraft}
               onSearchSubmit={workspace.handleSearchSubmit}
@@ -169,6 +187,7 @@ export function RecordListPage() {
             templateTriggerLabel={workspace.templateTriggerLabel}
             templates={workspace.templates}
             titleDraft={workspace.titleDraft}
+            titleFocusSignal={workspace.titleFocusSignal}
             onContentDraftChange={workspace.setContentDraft}
             onDeleteRecord={() => void workspace.handleDeleteRecord()}
             onDeleteTemplate={() => void workspace.handleDeleteTemplate()}
@@ -189,6 +208,8 @@ export function RecordListPage() {
             <TemplateSidebar
               currentUserName={currentUser?.username}
               isCollapsed={false}
+              newButtonPressed={templateNewButtonPressed}
+              onNewTemplatePressStart={flashTemplateNewButton}
               onNewTemplate={handleNewTemplate}
               onSelectTemplate={handleSelectTemplate}
               onToggleCollapsed={() => setCompactPanel(null)}
@@ -204,6 +225,8 @@ export function RecordListPage() {
           <TemplateSidebar
             currentUserName={currentUser?.username}
             isCollapsed={templateSidebarCollapsed}
+            newButtonPressed={templateNewButtonPressed}
+            onNewTemplatePressStart={flashTemplateNewButton}
             onNewTemplate={handleNewTemplate}
             onSelectTemplate={handleSelectTemplate}
             onToggleCollapsed={() => setTemplateSidebarCollapsed((current) => !current)}
