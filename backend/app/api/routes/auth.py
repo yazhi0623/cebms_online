@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Request, status
 
 from app.api.deps import CurrentUser, DBSession
+from app.api.request_utils import get_client_ip
 from app.models.user import User
 from app.repositories.user_repository import UserRepository
 from app.schemas.user import RefreshTokenRequest, Token, UserCreate, UserLogin, UserRead
@@ -20,8 +21,7 @@ def register(user_in: UserCreate, db: DBSession) -> User:
 def login(user_in: UserLogin, request: Request, db: DBSession) -> Token:
     """旧版登录入口。"""
     service = AuthService(UserRepository(db))
-    client_host = request.client.host if request.client else "unknown"
-    return service.login(user_in, client_key=client_host)
+    return service.login(user_in, client_key=get_client_ip(request))
 
 
 @router.get("/me", response_model=UserRead)
