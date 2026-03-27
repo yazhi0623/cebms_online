@@ -44,4 +44,6 @@ services:
 
 volumes:
   postgres_data:
+    name: aws-ubuntu-docker-private-api_postgres_data
   backend_generated:
+    name: aws-ubuntu-docker-private-api_backend_generated
