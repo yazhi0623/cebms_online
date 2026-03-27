@@ -1,0 +1,792 @@
+{
+  "current_model_index": 1,
+  "failed_attempts": {
+    "qwen3.5-plus": {
+      "failed_time": "2026-03-19 12:36:35",
+      "status_code": 403
+    },
+    "qwen-plus": {
+      "failed_time": "2026-03-19 12:36:41",
+      "status_code": 403
+    },
+    "qwen-max": {
+      "failed_time": "2026-03-19 14:36:25",
+      "status_code": 403
+    }
+  },
+  "last_updated": "2026-03-19 14:36:25",
+  "models": [
+    {
+      "name": "qwen-max",
+      "path": "qwen-portal/qwen-max"
+    },
+    {
+      "name": "qwen3-coder-plus",
+      "path": "qwen-portal/qwen3-coder-plus"
+    },
+    {
+      "name": "qwen-flash",
+      "path": "qwen-portal/qwen-flash"
+    },
+    {
+      "name": "qwq-plus",
+      "path": "qwen-portal/qwq-plus"
+    },
+    {
+      "name": "qwen-vl-max",
+      "path": "qwen-portal/qwen-vl-max"
+    },
+    {
+      "name": "qwen-vl-max-latest",
+      "path": "qwen-portal/qwen-vl-max-latest"
+    },
+    {
+      "name": "qvq-max",
+      "path": "qwen-portal/qvq-max"
+    },
+    {
+      "name": "qvq-plus",
+      "path": "qwen-portal/qvq-plus"
+    },
+    {
+      "name": "qvq-plus-latest",
+      "path": "qwen-portal/qvq-plus-latest"
+    },
+    {
+      "name": "qwen3-vl-30b-a3b-thinking",
+      "path": "qwen-portal/qwen3-vl-30b-a3b-thinking"
+    },
+    {
+      "name": "qwen3-vl-30b-a3b-instruct",
+      "path": "qwen-portal/qwen3-vl-30b-a3b-instruct"
+    },
+    {
+      "name": "deepseek-v3.2",
+      "path": "qwen-portal/deepseek-v3.2"
+    },
+    {
+      "name": "qwen3-vl-8b-thinking",
+      "path": "qwen-portal/qwen3-vl-8b-thinking"
+    },
+    {
+      "name": "deepseek-v3.2-exp",
+      "path": "qwen-portal/deepseek-v3.2-exp"
+    },
+    {
+      "name": "qwen-vl-max-2025-08-13",
+      "path": "qwen-portal/qwen-vl-max-2025-08-13"
+    },
+    {
+      "name": "qwen3-vl-flash",
+      "path": "qwen-portal/qwen3-vl-flash"
+    },
+    {
+      "name": "qwen3-max",
+      "path": "qwen-portal/qwen3-max"
+    },
+    {
+      "name": "qwen3-vl-plus",
+      "path": "qwen-portal/qwen3-vl-plus"
+    },
+    {
+      "name": "qwen3-coder-flash",
+      "path": "qwen-portal/qwen3-coder-flash"
+    },
+    {
+      "name": "qvq-plus-2025-05-15",
+      "path": "qwen-portal/qvq-plus-2025-05-15"
+    },
+    {
+      "name": "qwen-vl-max-2025-04-08",
+      "path": "qwen-portal/qwen-vl-max-2025-04-08"
+    },
+    {
+      "name": "qwen3-vl-8b-instruct",
+      "path": "qwen-portal/qwen3-vl-8b-instruct"
+    },
+    {
+      "name": "qwen-vl-plus",
+      "path": "qwen-portal/qwen-vl-plus"
+    },
+    {
+      "name": "qwen-vl-plus-latest",
+      "path": "qwen-portal/qwen-vl-plus-latest"
+    },
+    {
+      "name": "qwen3-vl-235b-a22b-thinking",
+      "path": "qwen-portal/qwen3-vl-235b-a22b-thinking"
+    },
+    {
+      "name": "qwen3-vl-235b-a22b-instruct",
+      "path": "qwen-portal/qwen3-vl-235b-a22b-instruct"
+    },
+    {
+      "name": "qwen-mt-plus",
+      "path": "qwen-portal/qwen-mt-plus"
+    },
+    {
+      "name": "qwen3-next-80b-a3b-instruct",
+      "path": "qwen-portal/qwen3-next-80b-a3b-instruct"
+    },
+    {
+      "name": "qwen-mt-flash",
+      "path": "qwen-portal/qwen-mt-flash"
+    },
+    {
+      "name": "qwen3-next-80b-a3b-thinking",
+      "path": "qwen-portal/qwen3-next-80b-a3b-thinking"
+    },
+    {
+      "name": "qwen-mt-turbo",
+      "path": "qwen-portal/qwen-mt-turbo"
+    },
+    {
+      "name": "qwen3-30b-a3b-instruct-2507",
+      "path": "qwen-portal/qwen3-30b-a3b-instruct-2507"
+    },
+    {
+      "name": "qwen3-30b-a3b-thinking-2507",
+      "path": "qwen-portal/qwen3-30b-a3b-thinking-2507"
+    },
+    {
+      "name": "qwen3-235b-a22b-thinking-2507",
+      "path": "qwen-portal/qwen3-235b-a22b-thinking-2507"
+    },
+    {
+      "name": "qwen3-235b-a22b-instruct-2507",
+      "path": "qwen-portal/qwen3-235b-a22b-instruct-2507"
+    },
+    {
+      "name": "qwen3-235b-a22b",
+      "path": "qwen-portal/qwen3-235b-a22b"
+    },
+    {
+      "name": "qwen3-30b-a3b",
+      "path": "qwen-portal/qwen3-30b-a3b"
+    },
+    {
+      "name": "qwen3-32b",
+      "path": "qwen-portal/qwen3-32b"
+    },
+    {
+      "name": "qwen3-14b",
+      "path": "qwen-portal/qwen3-14b"
+    },
+    {
+      "name": "qwen3-8b",
+      "path": "qwen-portal/qwen3-8b"
+    },
+    {
+      "name": "qwen3-4b",
+      "path": "qwen-portal/qwen3-4b"
+    },
+    {
+      "name": "qwen3-1.7b",
+      "path": "qwen-portal/qwen3-1.7b"
+    },
+    {
+      "name": "qwen3-0.6b",
+      "path": "qwen-portal/qwen3-0.6b"
+    },
+    {
+      "name": "qwen3-coder-480b-a35b-instruct",
+      "path": "qwen-portal/qwen3-coder-480b-a35b-instruct"
+    },
+    {
+      "name": "qwen3-coder-next",
+      "path": "qwen-portal/qwen3-coder-next"
+    },
+    {
+      "name": "2026/05/03",
+      "path": "qwen-portal/2026/05/03"
+    },
+    {
+      "name": "qwen3-coder-30b-a3b-instruct",
+      "path": "qwen-portal/qwen3-coder-30b-a3b-instruct"
+    },
+    {
+      "name": "kimi-k2.5",
+      "path": "qwen-portal/kimi-k2.5"
+    },
+    {
+      "name": "kimi-k2-thinking",
+      "path": "qwen-portal/kimi-k2-thinking"
+    },
+    {
+      "name": "Moonshot-Kimi-K2-Instruct",
+      "path": "qwen-portal/Moonshot-Kimi-K2-Instruct"
+    },
+    {
+      "name": "qwen2.5-vl-32b-instruct",
+      "path": "qwen-portal/qwen2.5-vl-32b-instruct"
+    },
+    {
+      "name": "qwen-turbo-latest",
+      "path": "qwen-portal/qwen-turbo-latest"
+    },
+    {
+      "name": "qvq-max-2025-05-15",
+      "path": "qwen-portal/qvq-max-2025-05-15"
+    },
+    {
+      "name": "qvq-max-latest",
+      "path": "qwen-portal/qvq-max-latest"
+    },
+    {
+      "name": "qvq-max-2025-03-25",
+      "path": "qwen-portal/qvq-max-2025-03-25"
+    },
+    {
+      "name": "glm-5",
+      "path": "qwen-portal/glm-5"
+    },
+    {
+      "name": "2026/05/13",
+      "path": "qwen-portal/2026/05/13"
+    },
+    {
+      "name": "glm-4.7",
+      "path": "qwen-portal/glm-4.7"
+    },
+    {
+      "name": "glm-4.6",
+      "path": "qwen-portal/glm-4.6"
+    },
+    {
+      "name": "qwen3-coder-plus-2025-09-23",
+      "path": "qwen-portal/qwen3-coder-plus-2025-09-23"
+    },
+    {
+      "name": "glm-4.5",
+      "path": "qwen-portal/glm-4.5"
+    },
+    {
+      "name": "qwen3-max-2026-01-23",
+      "path": "qwen-portal/qwen3-max-2026-01-23"
+    },
+    {
+      "name": "2026/04/23",
+      "path": "qwen-portal/2026/04/23"
+    },
+    {
+      "name": "qwen3-vl-plus-2025-12-19",
+      "path": "qwen-portal/qwen3-vl-plus-2025-12-19"
+    },
+    {
+      "name": "qwen-mt-lite",
+      "path": "qwen-portal/qwen-mt-lite"
+    },
+    {
+      "name": "qwen-flash-character",
+      "path": "qwen-portal/qwen-flash-character"
+    },
+    {
+      "name": "2026/04/23",
+      "path": "qwen-portal/2026/04/23"
+    },
+    {
+      "name": "qwen3-max-2025-09-23",
+      "path": "qwen-portal/qwen3-max-2025-09-23"
+    },
+    {
+      "name": "qwen3-vl-plus-2025-09-23",
+      "path": "qwen-portal/qwen3-vl-plus-2025-09-23"
+    },
+    {
+      "name": "qwen3-max-preview",
+      "path": "qwen-portal/qwen3-max-preview"
+    },
+    {
+      "name": "glm-4.5-air",
+      "path": "qwen-portal/glm-4.5-air"
+    },
+    {
+      "name": "qwen3-coder-flash-2025-07-28",
+      "path": "qwen-portal/qwen3-coder-flash-2025-07-28"
+    },
+    {
+      "name": "qwen-flash-2025-07-28",
+      "path": "qwen-portal/qwen-flash-2025-07-28"
+    },
+    {
+      "name": "qwen3-coder-plus-2025-07-22",
+      "path": "qwen-portal/qwen3-coder-plus-2025-07-22"
+    },
+    {
+      "name": "qwen-long-latest",
+      "path": "qwen-portal/qwen-long-latest"
+    },
+    {
+      "name": "qwen-long-2025-01-25",
+      "path": "qwen-portal/qwen-long-2025-01-25"
+    },
+    {
+      "name": "qwen-coder-plus",
+      "path": "qwen-portal/qwen-coder-plus"
+    },
+    {
+      "name": "qwen-coder-plus-1106",
+      "path": "qwen-portal/qwen-coder-plus-1106"
+    },
+    {
+      "name": "qwen-coder-plus-latest",
+      "path": "qwen-portal/qwen-coder-plus-latest"
+    },
+    {
+      "name": "qwen-max-latest",
+      "path": "qwen-portal/qwen-max-latest"
+    },
+    {
+      "name": "qwen-max-2025-01-25",
+      "path": "qwen-portal/qwen-max-2025-01-25"
+    },
+    {
+      "name": "qwen2.5-vl-72b-instruct",
+      "path": "qwen-portal/qwen2.5-vl-72b-instruct"
+    },
+    {
+      "name": "qwen2.5-vl-7b-instruct",
+      "path": "qwen-portal/qwen2.5-vl-7b-instruct"
+    },
+    {
+      "name": "qwen2.5-vl-3b-instruct",
+      "path": "qwen-portal/qwen2.5-vl-3b-instruct"
+    },
+    {
+      "name": "qwen2.5-7b-instruct-1m",
+      "path": "qwen-portal/qwen2.5-7b-instruct-1m"
+    },
+    {
+      "name": "qwen2.5-14b-instruct-1m",
+      "path": "qwen-portal/qwen2.5-14b-instruct-1m"
+    },
+    {
+      "name": "gui-plus",
+      "path": "qwen-portal/gui-plus"
+    },
+    {
+      "name": "qvq-72b-preview",
+      "path": "qwen-portal/qvq-72b-preview"
+    },
+    {
+      "name": "qwq-plus-latest",
+      "path": "qwen-portal/qwq-plus-latest"
+    },
+    {
+      "name": "qwq-plus-2025-03-05",
+      "path": "qwen-portal/qwq-plus-2025-03-05"
+    },
+    {
+      "name": "qwq-32b",
+      "path": "qwen-portal/qwq-32b"
+    },
+    {
+      "name": "qwen3-vl-flash-2026-01-22",
+      "path": "qwen-portal/qwen3-vl-flash-2026-01-22"
+    },
+    {
+      "name": "2026/04/22",
+      "path": "qwen-portal/2026/04/22"
+    },
+    {
+      "name": "tongyi-xiaomi-analysis-pro",
+      "path": "qwen-portal/tongyi-xiaomi-analysis-pro"
+    },
+    {
+      "name": "tongyi-xiaomi-analysis-flash",
+      "path": "qwen-portal/tongyi-xiaomi-analysis-flash"
+    },
+    {
+      "name": "qwen3-vl-flash-2025-10-15",
+      "path": "qwen-portal/qwen3-vl-flash-2025-10-15"
+    },
+    {
+      "name": "deepseek-v3.1",
+      "path": "qwen-portal/deepseek-v3.1"
+    },
+    {
+      "name": "qwq-32b-preview",
+      "path": "qwen-portal/qwq-32b-preview"
+    },
+    {
+      "name": "qwen-vl-plus-2025-08-15",
+      "path": "qwen-portal/qwen-vl-plus-2025-08-15"
+    },
+    {
+      "name": "qwen-vl-plus-2025-07-10",
+      "path": "qwen-portal/qwen-vl-plus-2025-07-10"
+    },
+    {
+      "name": "qwen-vl-plus-2025-05-07",
+      "path": "qwen-portal/qwen-vl-plus-2025-05-07"
+    },
+    {
+      "name": "qwen-vl-plus-2025-01-25",
+      "path": "qwen-portal/qwen-vl-plus-2025-01-25"
+    },
+    {
+      "name": "deepseek-r1-0528",
+      "path": "qwen-portal/deepseek-r1-0528"
+    },
+    {
+      "name": "deepseek-v3",
+      "path": "qwen-portal/deepseek-v3"
+    },
+    {
+      "name": "deepseek-r1",
+      "path": "qwen-portal/deepseek-r1"
+    },
+    {
+      "name": "qwen-plus-latest",
+      "path": "qwen-portal/qwen-plus-latest"
+    },
+    {
+      "name": "qwen-max-0919",
+      "path": "qwen-portal/qwen-max-0919"
+    },
+    {
+      "name": "qwen-plus-2025-12-01",
+      "path": "qwen-portal/qwen-plus-2025-12-01"
+    },
+    {
+      "name": "qwen-plus-2025-09-11",
+      "path": "qwen-portal/qwen-plus-2025-09-11"
+    },
+    {
+      "name": "qwen-plus-2025-07-28",
+      "path": "qwen-portal/qwen-plus-2025-07-28"
+    },
+    {
+      "name": "qwen-turbo-2025-07-15",
+      "path": "qwen-portal/qwen-turbo-2025-07-15"
+    },
+    {
+      "name": "qwen-plus-2025-07-14",
+      "path": "qwen-portal/qwen-plus-2025-07-14"
+    },
+    {
+      "name": "qwen-plus-2025-04-28",
+      "path": "qwen-portal/qwen-plus-2025-04-28"
+    },
+    {
+      "name": "qwen-turbo-2025-04-28",
+      "path": "qwen-portal/qwen-turbo-2025-04-28"
+    },
+    {
+      "name": "qwen-plus-2025-01-25",
+      "path": "qwen-portal/qwen-plus-2025-01-25"
+    },
+    {
+      "name": "qwen-turbo-2025-02-11",
+      "path": "qwen-portal/qwen-turbo-2025-02-11"
+    },
+    {
+      "name": "qwen-vl-ocr-2025-11-20",
+      "path": "qwen-portal/qwen-vl-ocr-2025-11-20"
+    },
+    {
+      "name": "qwen-vl-max-2025-04-02",
+      "path": "qwen-portal/qwen-vl-max-2025-04-02"
+    },
+    {
+      "name": "qwen-vl-max-2025-01-25",
+      "path": "qwen-portal/qwen-vl-max-2025-01-25"
+    },
+    {
+      "name": "qwen-vl-ocr-2025-08-28",
+      "path": "qwen-portal/qwen-vl-ocr-2025-08-28"
+    },
+    {
+      "name": "qwen-vl-ocr-2025-04-13",
+      "path": "qwen-portal/qwen-vl-ocr-2025-04-13"
+    },
+    {
+      "name": "qwen-vl-max-1230",
+      "path": "qwen-portal/qwen-vl-max-1230"
+    },
+    {
+      "name": "qwen-vl-max-1119",
+      "path": "qwen-portal/qwen-vl-max-1119"
+    },
+    {
+      "name": "qwen-vl-ocr-latest",
+      "path": "qwen-portal/qwen-vl-ocr-latest"
+    },
+    {
+      "name": "qwen-vl-ocr-1028",
+      "path": "qwen-portal/qwen-vl-ocr-1028"
+    },
+    {
+      "name": "qwen-vl-ocr",
+      "path": "qwen-portal/qwen-vl-ocr"
+    },
+    {
+      "name": "qwen2-vl-72b-instruct",
+      "path": "qwen-portal/qwen2-vl-72b-instruct"
+    },
+    {
+      "name": "剩100,000/共100,000",
+      "path": "qwen-portal/剩100,000/共100,000"
+    },
+    {
+      "name": "qwen-turbo-1101",
+      "path": "qwen-portal/qwen-turbo-1101"
+    },
+    {
+      "name": "剩10,000,000/共10,000,000",
+      "path": "qwen-portal/剩10,000,000/共10,000,000"
+    },
+    {
+      "name": "qwen2-vl-2b-instruct",
+      "path": "qwen-portal/qwen2-vl-2b-instruct"
+    },
+    {
+      "name": "剩100,000/共100,000",
+      "path": "qwen-portal/剩100,000/共100,000"
+    },
+    {
+      "name": "qwen2-vl-7b-instruct",
+      "path": "qwen-portal/qwen2-vl-7b-instruct"
+    },
+    {
+      "name": "剩100,000/共100,000",
+      "path": "qwen-portal/剩100,000/共100,000"
+    },
+    {
+      "name": "qwen2.5-72b-instruct",
+      "path": "qwen-portal/qwen2.5-72b-instruct"
+    },
+    {
+      "name": "qwen2.5-32b-instruct",
+      "path": "qwen-portal/qwen2.5-32b-instruct"
+    },
+    {
+      "name": "qwen2.5-14b-instruct",
+      "path": "qwen-portal/qwen2.5-14b-instruct"
+    },
+    {
+      "name": "qwen2.5-math-72b-instruct",
+      "path": "qwen-portal/qwen2.5-math-72b-instruct"
+    },
+    {
+      "name": "qwen2.5-math-7b-instruct",
+      "path": "qwen-portal/qwen2.5-math-7b-instruct"
+    },
+    {
+      "name": "qwen2.5-coder-1.5b-instruct",
+      "path": "qwen-portal/qwen2.5-coder-1.5b-instruct"
+    },
+    {
+      "name": "qwen2.5-coder-0.5b-instruct",
+      "path": "qwen-portal/qwen2.5-coder-0.5b-instruct"
+    },
+    {
+      "name": "qwen2.5-coder-14b-instruct",
+      "path": "qwen-portal/qwen2.5-coder-14b-instruct"
+    },
+    {
+      "name": "qwen2.5-coder-32b-instruct",
+      "path": "qwen-portal/qwen2.5-coder-32b-instruct"
+    },
+    {
+      "name": "qwen2.5-coder-3b-instruct",
+      "path": "qwen-portal/qwen2.5-coder-3b-instruct"
+    },
+    {
+      "name": "qwen2.5-coder-7b-instruct",
+      "path": "qwen-portal/qwen2.5-coder-7b-instruct"
+    },
+    {
+      "name": "qwen-math-plus",
+      "path": "qwen-portal/qwen-math-plus"
+    },
+    {
+      "name": "qwen-math-plus-0919",
+      "path": "qwen-portal/qwen-math-plus-0919"
+    },
+    {
+      "name": "qwen-math-plus-latest",
+      "path": "qwen-portal/qwen-math-plus-latest"
+    },
+    {
+      "name": "qwen-math-turbo",
+      "path": "qwen-portal/qwen-math-turbo"
+    },
+    {
+      "name": "qwen-math-turbo-0919",
+      "path": "qwen-portal/qwen-math-turbo-0919"
+    },
+    {
+      "name": "qwen-math-turbo-latest",
+      "path": "qwen-portal/qwen-math-turbo-latest"
+    },
+    {
+      "name": "qwen-coder-turbo",
+      "path": "qwen-portal/qwen-coder-turbo"
+    },
+    {
+      "name": "qwen-coder-turbo-0919",
+      "path": "qwen-portal/qwen-coder-turbo-0919"
+    },
+    {
+      "name": "qwen-coder-turbo-latest",
+      "path": "qwen-portal/qwen-coder-turbo-latest"
+    },
+    {
+      "name": "qwen2.5-math-1.5b-instruct",
+      "path": "qwen-portal/qwen2.5-math-1.5b-instruct"
+    },
+    {
+      "name": "qwen2.5-3b-instruct",
+      "path": "qwen-portal/qwen2.5-3b-instruct"
+    },
+    {
+      "name": "qwen2.5-1.5b-instruct",
+      "path": "qwen-portal/qwen2.5-1.5b-instruct"
+    },
+    {
+      "name": "qwen2.5-0.5b-instruct",
+      "path": "qwen-portal/qwen2.5-0.5b-instruct"
+    },
+    {
+      "name": "qwen2.5-7b-instruct",
+      "path": "qwen-portal/qwen2.5-7b-instruct"
+    },
+    {
+      "name": "deepseek-r1-distill-llama-70b",
+      "path": "qwen-portal/deepseek-r1-distill-llama-70b"
+    },
+    {
+      "name": "deepseek-r1-distill-llama-8b",
+      "path": "qwen-portal/deepseek-r1-distill-llama-8b"
+    },
+    {
+      "name": "deepseek-r1-distill-qwen-32b",
+      "path": "qwen-portal/deepseek-r1-distill-qwen-32b"
+    },
+    {
+      "name": "deepseek-r1-distill-qwen-14b",
+      "path": "qwen-portal/deepseek-r1-distill-qwen-14b"
+    },
+    {
+      "name": "deepseek-r1-distill-qwen-7b",
+      "path": "qwen-portal/deepseek-r1-distill-qwen-7b"
+    },
+    {
+      "name": "deepseek-r1-distill-qwen-1.5b",
+      "path": "qwen-portal/deepseek-r1-distill-qwen-1.5b"
+    },
+    {
+      "name": "tongyi-intent-detect-v3",
+      "path": "qwen-portal/tongyi-intent-detect-v3"
+    },
+    {
+      "name": "qwen2-0.5b-instruct",
+      "path": "qwen-portal/qwen2-0.5b-instruct"
+    },
+    {
+      "name": "qwen2-1.5b-instruct",
+      "path": "qwen-portal/qwen2-1.5b-instruct"
+    },
+    {
+      "name": "qwen2-7b-instruct",
+      "path": "qwen-portal/qwen2-7b-instruct"
+    },
+    {
+      "name": "qwen2-57b-a14b-instruct",
+      "path": "qwen-portal/qwen2-57b-a14b-instruct"
+    },
+    {
+      "name": "qwen2-72b-instruct",
+      "path": "qwen-portal/qwen2-72b-instruct"
+    },
+    {
+      "name": "qwen-long",
+      "path": "qwen-portal/qwen-long"
+    },
+    {
+      "name": "qwen-max-0428",
+      "path": "qwen-portal/qwen-max-0428"
+    },
+    {
+      "name": "qwen-doc-turbo",
+      "path": "qwen-portal/qwen-doc-turbo"
+    },
+    {
+      "name": "qwen1.5-110b-chat",
+      "path": "qwen-portal/qwen1.5-110b-chat"
+    },
+    {
+      "name": "qwen-plus-0112",
+      "path": "qwen-portal/qwen-plus-0112"
+    },
+    {
+      "name": "qwen-plus-1220",
+      "path": "qwen-portal/qwen-plus-1220"
+    },
+    {
+      "name": "llama-4-maverick-17b-128e-instruct",
+      "path": "qwen-portal/llama-4-maverick-17b-128e-instruct"
+    },
+    {
+      "name": "llama-4-scout-17b-16e-instruct",
+      "path": "qwen-portal/llama-4-scout-17b-16e-instruct"
+    },
+    {
+      "name": "qwen-plus-character",
+      "path": "qwen-portal/qwen-plus-character"
+    },
+    {
+      "name": "qwen-vl-plus-0102",
+      "path": "qwen-portal/qwen-vl-plus-0102"
+    },
+    {
+      "name": "qwen-math-plus-0816",
+      "path": "qwen-portal/qwen-math-plus-0816"
+    },
+    {
+      "name": "qwen3-vl-8b-base",
+      "path": "qwen-portal/qwen3-vl-8b-base"
+    },
+    {
+      "name": "qwen3-4b-instruct-2507",
+      "path": "qwen-portal/qwen3-4b-instruct-2507"
+    },
+    {
+      "name": "qwen-flash-character-2026-02-26",
+      "path": "qwen-portal/qwen-flash-character-2026-02-26"
+    },
+    {
+      "name": "MiniMax-M2.5",
+      "path": "qwen-portal/MiniMax-M2.5"
+    },
+    {
+      "name": "2026/05/25",
+      "path": "qwen-portal/2026/05/25"
+    },
+    {
+      "name": "MiniMax-M2.1",
+      "path": "qwen-portal/MiniMax-M2.1"
+    },
+    {
+      "name": "qwen1.5-14b-chat",
+      "path": "qwen-portal/qwen1.5-14b-chat"
+    },
+    {
+      "name": "qwen1.5-32b-chat",
+      "path": "qwen-portal/qwen1.5-32b-chat"
+    },
+    {
+      "name": "qwen1.5-72b-chat",
+      "path": "qwen-portal/qwen1.5-72b-chat"
+    },
+    {
+      "name": "qwen1.5-7b-chat",
+      "path": "qwen-portal/qwen1.5-7b-chat"
+    },
+    {
+      "name": "opennlu-v1",
+      "path": "qwen-portal/opennlu-v1"
+    }
+  ]
+}

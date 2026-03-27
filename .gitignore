@@ -1,11 +1,19 @@
 backup/
+docs/
+infra/
 temp/
+tests/
 generated/
 *.pyc
 *.pyo
 *.pyd
 *$py.class
 **/.pytest_tmp_*/
+AI合作改代码
+dev.bat
+docker-compose.yml
+README.md
+backend/backend/
 
 # --- 系统/IDE 垃圾 (预防权限占用报错) ---
 .idea/
