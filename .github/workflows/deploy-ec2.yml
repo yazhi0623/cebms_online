@@ -114,4 +114,13 @@ jobs:
             docker compose --env-file .env.prod -f "${{ env.DEPLOY_COMPOSE_FILE }}" down --remove-orphans || true
             docker compose --env-file .env.prod -f "${{ env.DEPLOY_COMPOSE_FILE }}" pull
             docker compose --env-file .env.prod -f "${{ env.DEPLOY_COMPOSE_FILE }}" up -d
-            curl --fail --silent -H "Host: ${{ env.DEPLOY_HEALTH_HOST }}" "${{ env.DEPLOY_HEALTH_URL }}"
+            for i in $(seq 1 20); do
+              if curl --fail --silent -H "Host: ${{ env.DEPLOY_HEALTH_HOST }}" "${{ env.DEPLOY_HEALTH_URL }}" > /dev/null; then
+                echo "Health check passed on attempt ${i}"
+                exit 0
+              fi
+              echo "Health check not ready on attempt ${i}, waiting..."
+              sleep 3
+            done
+            echo "Health check failed after retries"
+            exit 1
