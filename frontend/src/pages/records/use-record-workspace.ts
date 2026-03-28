@@ -14,14 +14,29 @@ import { sortTemplates } from "./record-workspace-utils";
 
 export type EditorMode = "record" | "template";
 
+type PendingAction =
+  | { type: "create-record" }
+  | { type: "create-template" }
+  | { type: "open-record"; recordId: number }
+  | { type: "open-template"; templateId: number }
+  | { type: "navigate"; path: string };
+
+type EditorBaseline = {
+  kind: EditorMode;
+  title: string;
+  content: string;
+  entityId: number | null;
+};
+
 export function useRecordWorkspace() {
   const { backendReady, currentUser, session } = useAuth();
-  const { confirm } = useConfirm();
+  const { confirm, confirmDetailed } = useConfirm();
   const [records, setRecords] = useState<RecordItem[]>([]);
   const [templates, setTemplates] = useState<TemplateItem[]>([]);
   const [recordsLoading, setRecordsLoading] = useState(false);
   const [templatesLoading, setTemplatesLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [templateSidebarError, setTemplateSidebarError] = useState<string | null>(null);
   const [templateError, setTemplateError] = useState<string | null>(null);
   const [editorError, setEditorError] = useState<string | null>(null);
   const [selectedRecordId, setSelectedRecordId] = useState<number | null>(null);
@@ -47,6 +62,12 @@ export function useRecordWorkspace() {
   const [templateMenuOpen, setTemplateMenuOpen] = useState(false);
   const [templateTriggerLabel, setTemplateTriggerLabel] = useState("导入模板");
   const [titleFocusSignal, setTitleFocusSignal] = useState(0);
+  const [baseline, setBaseline] = useState<EditorBaseline>({
+    kind: "record",
+    title: "",
+    content: "",
+    entityId: null,
+  });
   const selectAllRef = useRef<HTMLInputElement | null>(null);
   const templateMenuRef = useRef<HTMLDivElement | null>(null);
 
@@ -100,6 +121,7 @@ export function useRecordWorkspace() {
         setSelectedTemplateId(null);
         setSelectedRecordIds([]);
         setError(null);
+        setTemplateSidebarError(null);
         setTemplateError(null);
         setRecordsLoading(false);
         setTemplatesLoading(false);
@@ -109,6 +131,7 @@ export function useRecordWorkspace() {
       setRecordsLoading(true);
       setTemplatesLoading(true);
       setError(null);
+      setTemplateSidebarError(null);
       setTemplateError(null);
 
       try {
@@ -138,7 +161,7 @@ export function useRecordWorkspace() {
         }
 
         setError(loadError instanceof Error ? loadError.message : "加载记录失败");
-        setTemplateError(loadError instanceof Error ? loadError.message : "加载模板失败");
+        setTemplateSidebarError(loadError instanceof Error ? loadError.message : "加载模板失败");
         setSelectedRecordId(null);
         setSelectedTemplateId(null);
       } finally {
@@ -208,6 +231,12 @@ export function useRecordWorkspace() {
       setTitleDraft(selectedRecord.title);
       setContentDraft(selectedRecord.content);
       setRecordTemplateId(selectedRecord.templateId);
+      setBaseline({
+        kind: "record",
+        title: selectedRecord.title,
+        content: selectedRecord.content,
+        entityId: selectedRecord.id,
+      });
       setEditorError(null);
       return;
     }
@@ -215,6 +244,12 @@ export function useRecordWorkspace() {
     setTitleDraft("");
     setContentDraft(defaultTemplate?.content ?? "");
     setRecordTemplateId(defaultTemplate?.id ?? null);
+    setBaseline({
+      kind: "record",
+      title: "",
+      content: defaultTemplate?.content ?? "",
+      entityId: null,
+    });
     setEditorError(null);
   }, [defaultTemplate, selectedRecord]);
 
@@ -226,6 +261,12 @@ export function useRecordWorkspace() {
       if (editorMode === "template") {
         setTitleDraft(selectedTemplate.title);
         setContentDraft(selectedTemplate.content);
+        setBaseline({
+          kind: "template",
+          title: selectedTemplate.title,
+          content: selectedTemplate.content,
+          entityId: selectedTemplate.id,
+        });
       }
       return;
     }
@@ -233,6 +274,14 @@ export function useRecordWorkspace() {
     setTemplateTitleDraft("");
     setTemplateContentDraft("");
     setTemplateDefaultDraft(false);
+    if (editorMode === "template") {
+      setBaseline({
+        kind: "template",
+        title: "",
+        content: "",
+        entityId: null,
+      });
+    }
   }, [editorMode, selectedTemplate]);
 
   function handleSearchSubmit() {
@@ -245,6 +294,15 @@ export function useRecordWorkspace() {
 
   function showPageNotice(message: string) {
     setPageNotice(message);
+  }
+
+  function showEditorValidation(message: string) {
+    if (editorMode === "template") {
+      setTemplateError(message);
+    } else {
+      setEditorError(message);
+    }
+    showPageNotice(message);
   }
 
   function toggleRecordSelection(recordId: number, checked: boolean) {
@@ -277,20 +335,6 @@ export function useRecordWorkspace() {
     setTemplateMenuOpen(false);
   }
 
-  function handleSelectRecord(recordId: number) {
-    setEditorMode("record");
-    setSelectedRecordId(recordId);
-    setSelectedTemplateId(null);
-    setCreatingTemplate(false);
-  }
-
-  function handleSelectTemplate(templateId: number) {
-    setEditorMode("template");
-    setCreatingTemplate(false);
-    setSelectedRecordId(null);
-    setSelectedTemplateId(templateId);
-  }
-
   function requestTitleFocus() {
     setTitleFocusSignal((current) => current + 1);
   }
@@ -303,45 +347,32 @@ export function useRecordWorkspace() {
     return editorMode === "template" && selectedTemplate !== null && !creatingTemplate;
   }
 
-  function hasRecordChanges() {
-    if (!selectedRecord) {
-      return false;
+  function hasUnsavedChanges() {
+    if (editorMode === "template") {
+      return templateTitleDraft !== baseline.title || templateContentDraft !== baseline.content;
     }
 
-    return titleDraft !== selectedRecord.title || contentDraft !== selectedRecord.content;
-  }
-
-  function hasTemplateChanges() {
-    if (!selectedTemplate) {
-      return false;
-    }
-
-    return templateTitleDraft !== selectedTemplate.title || templateContentDraft !== selectedTemplate.content;
-  }
-
-  function hasRecordDraftText() {
-    return editorMode === "record" && selectedRecord === null && (titleDraft.trim().length > 0 || contentDraft.trim().length > 0);
-  }
-
-  function hasTemplateDraftText() {
-    return (
-      editorMode === "template" &&
-      (creatingTemplate || selectedTemplate === null) &&
-      (templateTitleDraft.trim().length > 0 || templateContentDraft.trim().length > 0)
-    );
+    return titleDraft !== baseline.title || contentDraft !== baseline.content;
   }
 
   function openNewRecordEditor() {
+    const nextContent = defaultTemplate?.content ?? "";
     setEditorMode("record");
     setSelectedRecordId(null);
     setSelectedTemplateId(null);
     setEditorError(null);
     setTitleDraft("");
-    setContentDraft(defaultTemplate?.content ?? "");
+    setContentDraft(nextContent);
     setRecordTemplateId(defaultTemplate?.id ?? null);
+    setBaseline({
+      kind: "record",
+      title: "",
+      content: nextContent,
+      entityId: null,
+    });
     setTemplateTriggerLabel("导入模板");
     setTemplateMenuOpen(false);
-    if (!defaultTemplate?.content.trim()) {
+    if (!nextContent.trim()) {
       requestTitleFocus();
     }
   }
@@ -358,123 +389,107 @@ export function useRecordWorkspace() {
     setTemplateError(null);
     setTitleDraft("");
     setContentDraft("");
+    setBaseline({
+      kind: "template",
+      title: "",
+      content: "",
+      entityId: null,
+    });
     setTemplateTriggerLabel("导入模板");
     setTemplateMenuOpen(false);
     requestTitleFocus();
   }
 
-  async function handleNewRecord() {
-    if (isEditingExistingRecord() && hasRecordChanges()) {
-      const shouldSave = await confirm({
-        message: "是否更新该记录？",
-        confirmLabel: "保存",
-        cancelLabel: "舍弃",
-      });
-      if (shouldSave) {
-        const saved = await handleSaveRecord();
-        if (!saved) {
-          return false;
-        }
-      }
-    } else if (hasRecordDraftText()) {
-      const shouldDiscard = await confirm({
-        message: "正在编辑记录，需要保留该记录吗？",
-        confirmLabel: "舍弃",
-        cancelLabel: "保留",
-      });
-      if (!shouldDiscard) {
-        return false;
-      }
-    } else if (isEditingExistingTemplate() && hasTemplateChanges()) {
-      const shouldSave = await confirm({
-        message: "是否更新该模板？",
-        confirmLabel: "保存",
-        cancelLabel: "舍弃",
-      });
-      if (shouldSave) {
-        const saved = await handleSaveTemplate();
-        if (!saved) {
-          return false;
-        }
-      }
-    } else if (hasTemplateDraftText()) {
-      const shouldDiscard = await confirm({
-        message: "正在编辑模板，需要保留该模板吗？",
-        confirmLabel: "舍弃",
-        cancelLabel: "保留",
-      });
-      if (!shouldDiscard) {
-        return false;
-      }
+  async function saveCurrentEditor() {
+    return editorMode === "template" ? handleSaveTemplate() : handleSaveRecord();
+  }
+
+  function executePendingAction(action: PendingAction) {
+    switch (action.type) {
+      case "create-record":
+        openNewRecordEditor();
+        return true;
+      case "create-template":
+        openNewTemplateEditor();
+        return true;
+      case "open-record":
+        setEditorMode("record");
+        setSelectedRecordId(action.recordId);
+        setSelectedTemplateId(null);
+        setCreatingTemplate(false);
+        return true;
+      case "open-template":
+        setEditorMode("template");
+        setCreatingTemplate(false);
+        setSelectedRecordId(null);
+        setSelectedTemplateId(action.templateId);
+        return true;
+      case "navigate":
+        return true;
+    }
+  }
+
+  async function runPendingAction(action: PendingAction) {
+    if (!hasUnsavedChanges()) {
+      return executePendingAction(action);
     }
 
-    openNewRecordEditor();
-    return true;
+    const result = await confirmDetailed({
+      message: "是否放弃未保存的修改？",
+      confirmLabel: "保存",
+      cancelLabel: "舍弃",
+    });
+
+    if (result === "dismiss") {
+      return false;
+    }
+
+    if (result === "cancel") {
+      return executePendingAction(action);
+    }
+
+    const saved = await saveCurrentEditor();
+    if (!saved) {
+      return false;
+    }
+
+    return executePendingAction(action);
+  }
+
+  async function handleNewRecord() {
+    return runPendingAction({ type: "create-record" });
   }
 
   async function handleNewTemplate() {
-    if (isEditingExistingTemplate() && hasTemplateChanges()) {
-      const shouldSave = await confirm({
-        message: "是否更新该模板？",
-        confirmLabel: "保存",
-        cancelLabel: "舍弃",
-      });
-      if (shouldSave) {
-        const saved = await handleSaveTemplate();
-        if (!saved) {
-          return false;
-        }
-      }
-    } else if (hasTemplateDraftText()) {
-      const shouldDiscard = await confirm({
-        message: "正在编辑模板，需要保留该模板吗？",
-        confirmLabel: "舍弃",
-        cancelLabel: "保留",
-      });
-      if (!shouldDiscard) {
-        return false;
-      }
-    } else if (isEditingExistingRecord() && hasRecordChanges()) {
-      const shouldSave = await confirm({
-        message: "是否更新该记录？",
-        confirmLabel: "保存",
-        cancelLabel: "舍弃",
-      });
-      if (shouldSave) {
-        const saved = await handleSaveRecord();
-        if (!saved) {
-          return false;
-        }
-      }
-    } else if (hasRecordDraftText()) {
-      const shouldDiscard = await confirm({
-        message: "正在编辑记录，需要保留该记录吗？",
-        confirmLabel: "舍弃",
-        cancelLabel: "保留",
-      });
-      if (!shouldDiscard) {
-        return false;
-      }
-    }
+    return runPendingAction({ type: "create-template" });
+  }
 
-    openNewTemplateEditor();
-    return true;
+  async function handleSelectRecord(recordId: number) {
+    return runPendingAction({ type: "open-record", recordId });
+  }
+
+  async function handleSelectTemplate(templateId: number) {
+    return runPendingAction({ type: "open-template", templateId });
+  }
+
+  async function handleProtectedNavigation(path: string) {
+    return runPendingAction({ type: "navigate", path });
   }
 
   async function handleSaveRecord() {
-    if (isDemoMode || !session?.accessToken) {
-      showLoginRequiredNotice();
-      return false;
-    }
-
     const nextTitle = titleDraft.trim();
     const nextContent = contentDraft.trim();
     if (!nextTitle) {
-      setEditorError("请输入记录标题");
+      showEditorValidation("请输入记录标题");
       return false;
     }
     if (!nextContent) {
-      setEditorError("请输入记录内容");
+      showEditorValidation("请输入记录内容");
+      return false;
+    }
+
+    if (isDemoMode || !session?.accessToken) {
+      showLoginRequiredNotice();
       return false;
     }
 
@@ -576,19 +591,19 @@ export function useRecordWorkspace() {
   }
 
   async function handleSaveTemplate() {
-    if (isDemoMode || !session?.accessToken) {
-      showLoginRequiredNotice();
-      return false;
-    }
-
     const nextTitle = templateTitleDraft.trim() || selectedTemplate?.title || "";
     const nextContent = templateContentDraft.trim();
     if (!nextTitle) {
-      setTemplateError("请输入模板标题");
+      showEditorValidation("请输入模板标题");
       return false;
     }
     if (!nextContent) {
-      setTemplateError("请输入模板内容");
+      showEditorValidation("请输入模板内容");
+      return false;
+    }
+
+    if (isDemoMode || !session?.accessToken) {
+      showLoginRequiredNotice();
       return false;
     }
 
@@ -623,19 +638,19 @@ export function useRecordWorkspace() {
   }
 
   async function handleSaveTemplateAsDefault() {
-    if (isDemoMode || !session?.accessToken) {
-      showLoginRequiredNotice();
-      return;
-    }
-
     const nextTitle = templateTitleDraft.trim() || selectedTemplate?.title || "";
     const nextContent = templateContentDraft.trim();
     if (!nextTitle) {
-      setTemplateError("请输入模板标题");
+      showEditorValidation("请输入模板标题");
       return;
     }
     if (!nextContent) {
-      setTemplateError("请输入模板内容");
+      showEditorValidation("请输入模板内容");
+      return;
+    }
+
+    if (isDemoMode || !session?.accessToken) {
+      showLoginRequiredNotice();
       return;
     }
 
@@ -674,19 +689,19 @@ export function useRecordWorkspace() {
     if (!selectedTemplate || !selectedTemplate.isDefault) {
       return;
     }
-    if (isDemoMode || !session?.accessToken) {
-      showLoginRequiredNotice();
-      return;
-    }
-
     const nextTitle = templateTitleDraft.trim() || selectedTemplate.title;
     const nextContent = templateContentDraft.trim();
     if (!nextTitle) {
-      setTemplateError("请输入模板标题");
+      showEditorValidation("请输入模板标题");
       return;
     }
     if (!nextContent) {
-      setTemplateError("请输入模板内容");
+      showEditorValidation("请输入模板内容");
+      return;
+    }
+
+    if (isDemoMode || !session?.accessToken) {
+      showLoginRequiredNotice();
       return;
     }
 
@@ -775,6 +790,7 @@ export function useRecordWorkspace() {
     recordsLoading,
     templatesLoading,
     error,
+    templateSidebarError,
     templateError,
     editorError,
     selectedRecordId,
@@ -810,6 +826,7 @@ export function useRecordWorkspace() {
     allVisibleSelected,
     showTemplateToolbar,
     footerStatusText,
+    hasUnsavedChanges: hasUnsavedChanges(),
     setSearchDraft,
     setTitleDraft,
     setContentDraft,
@@ -821,6 +838,7 @@ export function useRecordWorkspace() {
     handleToggleSelectAll,
     handleSelectRecord,
     handleSelectTemplate,
+    handleProtectedNavigation,
     handleImportTemplateIntoEditor,
     handleSaveRecord,
     handleDeleteRecord,

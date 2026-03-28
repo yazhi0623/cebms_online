@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 
+import { useNavigation } from "../../shared/hooks/use-navigation";
 import { useAuth } from "../../shared/hooks/use-auth";
 import { RecordEditor } from "./record-editor";
 import { RecordSidebar } from "./record-sidebar";
@@ -8,6 +9,7 @@ import { useRecordWorkspace } from "./use-record-workspace";
 
 export function RecordListPage() {
   const { currentUser } = useAuth();
+  const { setBlocker } = useNavigation();
   const workspace = useRecordWorkspace();
   const [templateSidebarCollapsed, setTemplateSidebarCollapsed] = useState(true);
   const [compactLayout, setCompactLayout] = useState(false);
@@ -33,22 +35,47 @@ export function RecordListPage() {
     };
   }, []);
 
+  useEffect(() => {
+    setBlocker((path) => workspace.handleProtectedNavigation(path));
+    return () => {
+      setBlocker(null);
+    };
+  }, [setBlocker, workspace]);
+
+  useEffect(() => {
+    function handleBeforeUnload(event: BeforeUnloadEvent) {
+      if (!workspace.hasUnsavedChanges) {
+        return;
+      }
+
+      event.preventDefault();
+      event.returnValue = "";
+    }
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+    };
+  }, [workspace.hasUnsavedChanges]);
+
   function toggleCompactPanel(nextPanel: "records" | "templates") {
     setCompactPanel((current) => (current === nextPanel ? null : nextPanel));
   }
 
   function handleSelectRecord(recordId: number) {
-    workspace.handleSelectRecord(recordId);
-    if (compactLayout) {
-      setCompactPanel(null);
-    }
+    void workspace.handleSelectRecord(recordId).then((didSwitch) => {
+      if (compactLayout && didSwitch) {
+        setCompactPanel(null);
+      }
+    });
   }
 
   function handleSelectTemplate(templateId: number) {
-    workspace.handleSelectTemplate(templateId);
-    if (compactLayout) {
-      setCompactPanel(null);
-    }
+    void workspace.handleSelectTemplate(templateId).then((didSwitch) => {
+      if (compactLayout && didSwitch) {
+        setCompactPanel(null);
+      }
+    });
   }
 
   function flashRecordNewButton() {
@@ -212,12 +239,12 @@ export function RecordListPage() {
               onNewTemplatePressStart={flashTemplateNewButton}
               onNewTemplate={handleNewTemplate}
               onSelectTemplate={handleSelectTemplate}
-              onToggleCollapsed={() => setCompactPanel(null)}
-              selectedTemplateId={workspace.selectedTemplateId}
-              templateError={workspace.templateError}
-              templates={workspace.templates}
-              templatesLoading={workspace.templatesLoading}
-            />
+            onToggleCollapsed={() => setCompactPanel(null)}
+            selectedTemplateId={workspace.selectedTemplateId}
+            templateError={workspace.templateSidebarError}
+            templates={workspace.templates}
+            templatesLoading={workspace.templatesLoading}
+          />
           </div>
         ) : null}
 
@@ -231,7 +258,7 @@ export function RecordListPage() {
             onSelectTemplate={handleSelectTemplate}
             onToggleCollapsed={() => setTemplateSidebarCollapsed((current) => !current)}
             selectedTemplateId={workspace.selectedTemplateId}
-            templateError={workspace.templateError}
+            templateError={workspace.templateSidebarError}
             templates={workspace.templates}
             templatesLoading={workspace.templatesLoading}
           />

@@ -3,20 +3,12 @@ import { useEffect, useState } from "react";
 import { LoginPage } from "../../pages/auth/login-page";
 import { routes } from "../../shared/constants/routes";
 import { useAuth } from "../../shared/hooks/use-auth";
+import { useNavigation } from "../../shared/hooks/use-navigation";
 import { resolveRoute, routeDefinitions } from "./routes";
-
-function navigate(path: string) {
-  if (window.location.pathname === path) {
-    return;
-  }
-
-  // 当前项目路由还不复杂，先用浏览器原生 history 实现轻量路由。
-  window.history.pushState({}, "", path);
-  window.dispatchEvent(new PopStateEvent("popstate"));
-}
 
 export function AppRouter() {
   const { currentUser, loading, logout } = useAuth();
+  const { navigate } = useNavigation();
   const [pathname, setPathname] = useState(window.location.pathname);
   const [lastContentPath, setLastContentPath] = useState(
     window.location.pathname === routes.login ? routes.records : window.location.pathname,
@@ -69,7 +61,9 @@ export function AppRouter() {
                 <button
                   key={route.path}
                   className={active ? "shell__nav-button shell__nav-button--active" : "shell__nav-button"}
-                  onClick={() => navigate(route.path)}
+                  onClick={() => {
+                    void navigate(route.path);
+                  }}
                   type="button"
                 >
                   {route.label}
@@ -88,14 +82,20 @@ export function AppRouter() {
                 className="shell__nav-button"
                 onClick={() => {
                   void logout();
-                  navigate(routes.login);
+                  void navigate(routes.login);
                 }}
                 type="button"
               >
                 退出
               </button>
             ) : (
-              <button className="shell__nav-button" onClick={() => navigate(routes.login)} type="button">
+              <button
+                className="shell__nav-button"
+                onClick={() => {
+                  void navigate(routes.login);
+                }}
+                type="button"
+              >
                 登录/注册
               </button>
             )}
@@ -109,7 +109,7 @@ export function AppRouter() {
             <LoginPage
               modal
               onClose={() => {
-                navigate(lastContentPath);
+                void navigate(lastContentPath);
               }}
             />
           </div>
