@@ -2982,6 +2982,8 @@ textarea {
     justify-content: flex-end;
     align-items: center;
     gap: 8px;
+    margin-top: -2px;
+    margin-bottom: -2px;
   }
 
   .analysis-page-toolbar__label {
