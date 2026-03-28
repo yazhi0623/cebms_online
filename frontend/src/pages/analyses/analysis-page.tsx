@@ -29,7 +29,7 @@ const analysisMenuGroups = [
   { value: "template", label: "模板" },
 ] as const;
 
-const ANALYSIS_MENU_PRIMARY_WIDTH = 112;
+const ANALYSIS_MENU_PRIMARY_MIN_WIDTH = 44;
 
 type AnalysisSelectionType = "range" | "template";
 
@@ -109,6 +109,18 @@ function formatDate(value: string): string {
   return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
 }
 
+function formatDateOnly(value: string): string {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
 function normalizeGenerateErrorMessage(message: string): string {
   const thresholdMatch = message.match(/^At least (\d+) records are required for analysis$/);
   if (thresholdMatch) {
@@ -141,15 +153,26 @@ export function AnalysisPage() {
   const [analysisMenuOpen, setAnalysisMenuOpen] = useState(false);
   const [analysisMenuGroup, setAnalysisMenuGroup] = useState<AnalysisSelectionType>("range");
   const [analysisMenuWidth, setAnalysisMenuWidth] = useState(220);
+  const [analysisMenuPrimaryWidth, setAnalysisMenuPrimaryWidth] = useState(52);
+  const [portraitLayout, setPortraitLayout] = useState(window.matchMedia("(orientation: portrait)").matches);
+  const analysisToolbarRef = useRef<HTMLDivElement | null>(null);
+  const analysisToolbarLabelRef = useRef<HTMLSpanElement | null>(null);
   const analysisMenuRef = useRef<HTMLDivElement | null>(null);
   const analysisTriggerRef = useRef<HTMLButtonElement | null>(null);
 
   const isDemoMode = !backendReady || !session?.accessToken || !currentUser;
   const visibleAnalyses = analyses.filter((analysis) => analysis.analysisType !== "batch_chunk");
-  const usedTemplateOptions = useMemo(() => {
-    const usedTemplateIds = new Set(records.map((record) => record.templateId).filter((value): value is number => value !== null));
-    return templates.filter((template) => usedTemplateIds.has(template.id));
-  }, [records, templates]);
+  const availableTemplateOptions = useMemo(
+    () =>
+      [...templates].sort((left, right) => {
+        if (left.isDefault !== right.isDefault) {
+          return left.isDefault ? -1 : 1;
+        }
+
+        return right.updatedAt.localeCompare(left.updatedAt);
+      }),
+    [templates],
+  );
   const latestAnalysisTime =
     visibleAnalyses.reduce<string | null>((latest, analysis) => {
       if (!analysis.createdAt) {
@@ -162,6 +185,20 @@ export function AnalysisPage() {
 
       return new Date(analysis.createdAt).getTime() > new Date(latest).getTime() ? analysis.createdAt : latest;
     }, null) ?? aggregate?.latestDay ?? null;
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia("(orientation: portrait)");
+
+    const syncPortraitLayout = (event?: MediaQueryListEvent) => {
+      setPortraitLayout(event?.matches ?? mediaQuery.matches);
+    };
+
+    syncPortraitLayout();
+    mediaQuery.addEventListener("change", syncPortraitLayout);
+    return () => {
+      mediaQuery.removeEventListener("change", syncPortraitLayout);
+    };
+  }, []);
 
   useEffect(() => {
     if (!pageNotice) {
@@ -195,34 +232,102 @@ export function AnalysisPage() {
   }, [analysisMenuOpen]);
 
   useLayoutEffect(() => {
-    if (!analysisTriggerRef.current) {
+    if (!analysisTriggerRef.current || !analysisToolbarRef.current || !analysisToolbarLabelRef.current) {
       return;
     }
 
-    const labels = [
-      selectedLabel,
+    const activeSubmenuLabels =
+      analysisMenuGroup === "range"
+        ? analysisRangeOptions.map((option) => option.label)
+        : availableTemplateOptions.length
+          ? availableTemplateOptions.map((template) => template.title)
+          : ["暂无模板"];
+    const allSubmenuLabels = [
       ...analysisRangeOptions.map((option) => option.label),
-      ...(usedTemplateOptions.length ? usedTemplateOptions.map((template) => template.title) : ["暂无已使用模板"]),
+      ...(availableTemplateOptions.length ? availableTemplateOptions.map((template) => template.title) : ["暂无模板"]),
     ];
-    const computedStyle = window.getComputedStyle(analysisTriggerRef.current);
-    const canvas = document.createElement("canvas");
-    const context = canvas.getContext("2d");
-    if (!context) {
-      return;
-    }
+    const submenuLabels = portraitLayout ? [selectedLabel, ...activeSubmenuLabels] : [selectedLabel, ...allSubmenuLabels];
+    const primaryLabels = analysisMenuGroups.map((group) => group.label);
+    const minSubmenuWidth = portraitLayout ? 64 : 140;
+    const measureShell = document.createElement("div");
+    const measurePanel = document.createElement("div");
+    const measurePrimary = document.createElement("div");
+    const measureSubmenu = document.createElement("div");
+    measureShell.className = "analysis-menu-shell";
+    measureShell.style.position = "fixed";
+    measureShell.style.left = "-10000px";
+    measureShell.style.top = "0";
+    measureShell.style.visibility = "hidden";
+    measureShell.style.pointerEvents = "none";
+    measureShell.style.width = "auto";
+    measurePanel.className = portraitLayout ? "analysis-menu__panel analysis-menu__panel--portrait" : "analysis-menu__panel";
+    measurePanel.style.position = "static";
+    measurePanel.style.top = "auto";
+    measurePanel.style.right = "auto";
+    measurePanel.style.width = "auto";
+    measurePanel.style.gridTemplateColumns = "max-content max-content";
+    measurePrimary.className = "analysis-menu__primary";
+    measureSubmenu.className = portraitLayout ? "analysis-menu__submenu analysis-menu__submenu--portrait" : "analysis-menu__submenu";
 
-    context.font = [
-      computedStyle.fontStyle,
-      computedStyle.fontVariant,
-      computedStyle.fontWeight,
-      computedStyle.fontSize,
-      computedStyle.fontFamily,
-    ].join(" ");
+    primaryLabels.forEach((label) => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "analysis-menu__group";
+      button.textContent = label;
+      measurePrimary.appendChild(button);
+    });
 
-    const widestLabel = labels.reduce((maxWidth, label) => Math.max(maxWidth, context.measureText(label).width), 0);
-    const nextWidth = Math.min(Math.max(Math.ceil(widestLabel + 76), 220), 380);
-    setAnalysisMenuWidth(nextWidth);
-  }, [selectedLabel, usedTemplateOptions]);
+    submenuLabels.forEach((label) => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = portraitLayout ? "analysis-menu__option analysis-menu__option--portrait" : "analysis-menu__option";
+      button.textContent = label;
+      measureSubmenu.appendChild(button);
+    });
+
+    measurePanel.appendChild(measurePrimary);
+    measurePanel.appendChild(measureSubmenu);
+    measureShell.appendChild(measurePanel);
+    document.body.appendChild(measureShell);
+
+    const desiredPrimaryWidth = Math.max(
+      ANALYSIS_MENU_PRIMARY_MIN_WIDTH,
+      Math.ceil(measurePrimary.getBoundingClientRect().width),
+    );
+    const desiredSubmenuWidth = Math.max(
+      minSubmenuWidth,
+      Math.ceil(measureSubmenu.getBoundingClientRect().width),
+    );
+
+    document.body.removeChild(measureShell);
+
+    const toolbarStyle = window.getComputedStyle(analysisToolbarRef.current);
+    const toolbarGap = Number.parseFloat(toolbarStyle.columnGap || toolbarStyle.gap || "0");
+    const availableTotalWidth = Math.max(
+      desiredPrimaryWidth + minSubmenuWidth,
+      Math.floor(
+        analysisToolbarRef.current.getBoundingClientRect().width -
+          analysisToolbarLabelRef.current.getBoundingClientRect().width -
+          toolbarGap,
+      ),
+    );
+    const hardMaxTotalWidth = portraitLayout ? window.innerWidth - 12 : 520;
+    const maxTotalWidth = Math.max(
+      ANALYSIS_MENU_PRIMARY_MIN_WIDTH + minSubmenuWidth,
+      Math.min(availableTotalWidth, hardMaxTotalWidth),
+    );
+    const nextPrimaryWidth = Math.min(
+      desiredPrimaryWidth,
+      Math.max(ANALYSIS_MENU_PRIMARY_MIN_WIDTH, maxTotalWidth - minSubmenuWidth),
+    );
+    const nextSubmenuWidth = Math.min(
+      desiredSubmenuWidth,
+      Math.max(minSubmenuWidth, maxTotalWidth - nextPrimaryWidth),
+    );
+
+    setAnalysisMenuPrimaryWidth(nextPrimaryWidth);
+    setAnalysisMenuWidth(nextSubmenuWidth);
+  }, [analysisMenuGroup, availableTemplateOptions, portraitLayout, selectedLabel]);
 
   async function loadAnalysisData(): Promise<{ todayCount: TodayAnalysisCount | null }> {
     if (!session?.accessToken || isDemoMode) {
@@ -331,7 +436,7 @@ export function AnalysisPage() {
     }
   }
 
-  const analysisMenuPanelWidth = analysisMenuWidth + ANALYSIS_MENU_PRIMARY_WIDTH;
+  const analysisMenuPanelWidth = analysisMenuWidth + analysisMenuPrimaryWidth;
 
   return (
     <section className="analysis-page-shell">
@@ -367,13 +472,17 @@ export function AnalysisPage() {
             </div>
             <div className="data-center-stat">
               <span className="data-center-stat__label">最近时间</span>
-              <strong>{latestAnalysisTime ? formatDate(latestAnalysisTime) : "暂无"}</strong>
+              <strong>{latestAnalysisTime ? (portraitLayout ? formatDateOnly(latestAnalysisTime) : formatDate(latestAnalysisTime)) : "暂无"}</strong>
             </div>
           </div>
         </article>
-        <div className="analysis-page-toolbar">
-          <span className="analysis-page-toolbar__label">AI分析</span>
-          <div className="analysis-menu-shell" ref={analysisMenuRef} style={{ width: `${analysisMenuWidth}px` }}>
+        <div className="analysis-page-toolbar" ref={analysisToolbarRef}>
+          <span className="analysis-page-toolbar__label" ref={analysisToolbarLabelRef}>AI分析</span>
+          <div
+            className="analysis-menu-shell"
+            ref={analysisMenuRef}
+            style={{ width: `${analysisMenuPanelWidth}px` }}
+          >
             <button
               aria-expanded={analysisMenuOpen}
               aria-haspopup="menu"
@@ -393,7 +502,11 @@ export function AnalysisPage() {
               />
             </button>
             {analysisMenuOpen ? (
-              <div className="analysis-menu__panel" role="menu" style={{ width: `${analysisMenuPanelWidth}px` }}>
+              <div
+                className={portraitLayout ? "analysis-menu__panel analysis-menu__panel--portrait" : "analysis-menu__panel"}
+                role="menu"
+                style={{ width: "100%", gridTemplateColumns: `${analysisMenuPrimaryWidth}px ${analysisMenuWidth}px` }}
+              >
                 <div className="analysis-menu__primary" role="presentation">
                   {analysisMenuGroups.map((group) => (
                     <button
@@ -409,11 +522,22 @@ export function AnalysisPage() {
                     </button>
                   ))}
                 </div>
-                <div className="analysis-menu__submenu" style={{ width: `${analysisMenuWidth}px` }}>
+                <div
+                  className={portraitLayout ? "analysis-menu__submenu analysis-menu__submenu--portrait" : "analysis-menu__submenu"}
+                  style={{ width: `${analysisMenuWidth}px` }}
+                >
                   {analysisMenuGroup === "range"
                     ? analysisRangeOptions.map((option) => (
                         <button
-                          className={selectedLabel === option.label ? "analysis-menu__option analysis-menu__option--active" : "analysis-menu__option"}
+                          className={
+                            portraitLayout
+                              ? selectedLabel === option.label
+                                ? "analysis-menu__option analysis-menu__option--portrait analysis-menu__option--active"
+                                : "analysis-menu__option analysis-menu__option--portrait"
+                              : selectedLabel === option.label
+                                ? "analysis-menu__option analysis-menu__option--active"
+                                : "analysis-menu__option"
+                          }
                           key={option.value}
                           onClick={() => void requestGenerateAnalysis({ rangeMonths: option.months }, "range", option.label)}
                           role="menuitem"
@@ -422,21 +546,28 @@ export function AnalysisPage() {
                           {option.label}
                         </button>
                       ))
-                    : usedTemplateOptions.length
-                      ? usedTemplateOptions.map((template) => (
+                    : availableTemplateOptions.length
+                      ? availableTemplateOptions.map((template) => (
                           <button
-                            className={selectedLabel === template.title ? "analysis-menu__option analysis-menu__option--active" : "analysis-menu__option"}
+                            className={
+                              portraitLayout
+                                ? selectedLabel === template.title
+                                  ? "analysis-menu__option analysis-menu__option--portrait analysis-menu__option--active"
+                                  : "analysis-menu__option analysis-menu__option--portrait"
+                                : selectedLabel === template.title
+                                  ? "analysis-menu__option analysis-menu__option--active"
+                                  : "analysis-menu__option"
+                            }
                             key={template.id}
                             onClick={() => void requestGenerateAnalysis({ templateId: template.id }, "template", template.title)}
                             role="menuitem"
-                            title={template.title}
                             type="button"
                           >
                             {template.title}
                           </button>
                         ))
                       : (
-                          <div className="analysis-menu__empty">暂无已使用模板</div>
+                          <div className={portraitLayout ? "analysis-menu__empty analysis-menu__empty--portrait" : "analysis-menu__empty"}>暂无模板</div>
                         )}
                 </div>
               </div>
