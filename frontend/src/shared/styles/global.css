@@ -2828,6 +2828,13 @@ textarea {
     min-height: 42px;
   }
 
+  .record-workspace__compact-switches .shell__nav-button--pressable:not(:disabled):active,
+  .record-workspace__compact-switches .shell__nav-button--active.shell__nav-button--pressable:not(:disabled):active {
+    transform: translateY(1px) scale(0.98);
+    background: inherit;
+    box-shadow: none;
+  }
+
   .record-workspace__compact-panel {
     display: block;
     min-height: 0;
@@ -2865,18 +2872,22 @@ textarea {
     overflow: hidden;
   }
 
+  .record-workspace--compact .editor-form {
+    flex: 1 1 auto;
+  }
+
   .record-workspace--compact .editor-title-row {
     width: 100%;
     grid-template-columns: 52px minmax(0, 1fr);
   }
 
   .record-workspace--compact .editor-form__field--legacy-content {
-    flex: 0 0 auto;
+    flex: 1 1 auto;
   }
 
   .record-workspace--compact .editor-form__field--legacy-content textarea {
-    min-height: clamp(180px, 26dvh, 300px);
-    height: clamp(180px, 26dvh, 300px);
+    min-height: 0;
+    height: 100%;
   }
 
   .record-workspace--compact .editor-footer {

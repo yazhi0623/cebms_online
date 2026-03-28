@@ -14,7 +14,9 @@ import {
 import { fetchRecords } from "../../features/record/api";
 import { fetchTemplates } from "../../features/template/api";
 import {
+  loadAnalysisPreviewCache,
   loadTemplateListCache,
+  saveAnalysisPreviewCache,
   saveTemplateListCache,
 } from "../../shared/constants/storage";
 import { uiTiming } from "../../shared/constants/ui";
@@ -362,8 +364,17 @@ export function AnalysisPage() {
 
     let hasWarmCache = false;
     if (markInitialized) {
+      const cachedAnalysisPreview = loadAnalysisPreviewCache(currentUser.id);
       const cachedTemplates = loadTemplateListCache(currentUser.id);
-      hasWarmCache = Boolean(cachedTemplates?.templates.length);
+      hasWarmCache = Boolean(
+        cachedAnalysisPreview?.analyses.length || cachedAnalysisPreview?.aggregate || cachedAnalysisPreview?.todayCount || cachedTemplates?.templates.length,
+      );
+
+      if (cachedAnalysisPreview) {
+        setAnalyses(cachedAnalysisPreview.analyses);
+        setAggregate(cachedAnalysisPreview.aggregate);
+        setTodayCount(cachedAnalysisPreview.todayCount);
+      }
 
       if (cachedTemplates?.templates.length) {
         setTemplates(cachedTemplates.templates);
@@ -392,6 +403,11 @@ export function AnalysisPage() {
       setTodayCount(nextTodayCount);
       setRecords(nextRecords);
       setTemplates(nextTemplates);
+      saveAnalysisPreviewCache(currentUser.id, {
+        analyses: nextAnalyses.filter((analysis) => analysis.analysisType !== "batch_chunk"),
+        aggregate: nextAggregate,
+        todayCount: nextTodayCount,
+      });
       saveTemplateListCache(currentUser.id, nextTemplates);
       return { todayCount: nextTodayCount };
     } catch (loadError) {
