@@ -215,6 +215,13 @@ textarea {
   position: relative;
 }
 
+.page-init-shell {
+  min-height: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
 .page-init-overlay {
   position: absolute;
   inset: 0;
@@ -223,6 +230,7 @@ textarea {
   place-items: center;
   background: rgba(247, 240, 232, 0.78);
   backdrop-filter: blur(1px);
+  border-radius: 28px;
 }
 
 .page-init-overlay__dialog {
@@ -2805,6 +2813,9 @@ textarea {
 
   .record-workspace--compact {
     align-items: stretch;
+    flex: 1 1 auto;
+    min-height: 0;
+    height: 100%;
   }
 
   .record-workspace__compact-switches {
@@ -2850,8 +2861,8 @@ textarea {
   .record-workspace--compact .record-editor-shell {
     grid-column: auto;
     min-height: 0;
-    height: auto;
-    overflow: visible;
+    height: 100%;
+    overflow: hidden;
   }
 
   .record-workspace--compact .editor-title-row {
