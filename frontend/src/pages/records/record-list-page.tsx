@@ -105,7 +105,15 @@ export function RecordListPage() {
   }
 
   return (
-    <>
+    <div className="page-init-shell">
+      {workspace.initialLoading ? (
+        <div className="page-init-overlay" role="status" aria-live="polite">
+          <div className="page-init-overlay__dialog">
+            <div className="page-init-overlay__spinner" aria-hidden="true" />
+            <strong>加载中...</strong>
+          </div>
+        </div>
+      ) : null}
       <section
         className={
           compactLayout
@@ -264,6 +272,6 @@ export function RecordListPage() {
           />
         ) : null}
       </section>
-    </>
+    </div>
   );
 }
