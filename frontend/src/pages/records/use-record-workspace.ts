@@ -29,7 +29,8 @@ type EditorBaseline = {
 };
 
 export function useRecordWorkspace() {
-  const { backendReady, currentUser, session } = useAuth();
+  const minimumInitOverlayMs = 1000;
+  const { backendReady, currentUser, session, loading: authLoading } = useAuth();
   const { confirm, confirmDetailed } = useConfirm();
   const [records, setRecords] = useState<RecordItem[]>([]);
   const [templates, setTemplates] = useState<TemplateItem[]>([]);
@@ -59,6 +60,7 @@ export function useRecordWorkspace() {
   const [deletingSelected, setDeletingSelected] = useState(false);
   const [importNotice, setImportNotice] = useState<string | null>(null);
   const [pageNotice, setPageNotice] = useState<string | null>(null);
+  const [initialLoading, setInitialLoading] = useState(true);
   const [templateMenuOpen, setTemplateMenuOpen] = useState(false);
   const [templateTriggerLabel, setTemplateTriggerLabel] = useState("导入模板");
   const [titleFocusSignal, setTitleFocusSignal] = useState(0);
@@ -70,6 +72,7 @@ export function useRecordWorkspace() {
   });
   const selectAllRef = useRef<HTMLInputElement | null>(null);
   const templateMenuRef = useRef<HTMLDivElement | null>(null);
+  const initialLoadingStartedAtRef = useRef(Date.now());
 
   useEffect(() => {
     const notice = loadRecordImportNotice();
@@ -113,6 +116,8 @@ export function useRecordWorkspace() {
     let active = true;
 
     async function loadWorkspaceData() {
+      initialLoadingStartedAtRef.current = Date.now();
+
       if (!backendReady || !session?.accessToken || !currentUser) {
         // 后端不可用或未登录时进入 demo 模式，保证页面仍可演示和阅读。
         setRecords(demoRecords);
@@ -125,11 +130,18 @@ export function useRecordWorkspace() {
         setTemplateError(null);
         setRecordsLoading(false);
         setTemplatesLoading(false);
+        const remaining = Math.max(0, minimumInitOverlayMs - (Date.now() - initialLoadingStartedAtRef.current));
+        window.setTimeout(() => {
+          if (active) {
+            setInitialLoading(false);
+          }
+        }, remaining);
         return;
       }
 
       setRecordsLoading(true);
       setTemplatesLoading(true);
+      setInitialLoading(true);
       setError(null);
       setTemplateSidebarError(null);
       setTemplateError(null);
@@ -168,6 +180,12 @@ export function useRecordWorkspace() {
         if (active) {
           setRecordsLoading(false);
           setTemplatesLoading(false);
+          const remaining = Math.max(0, minimumInitOverlayMs - (Date.now() - initialLoadingStartedAtRef.current));
+          window.setTimeout(() => {
+            if (active) {
+              setInitialLoading(false);
+            }
+          }, remaining);
         }
       }
     }
@@ -818,6 +836,7 @@ export function useRecordWorkspace() {
     selectAllRef,
     templateMenuRef,
     isDemoMode,
+    initialLoading: authLoading || initialLoading,
     filteredRecords,
     selectedRecord,
     selectedTemplate,

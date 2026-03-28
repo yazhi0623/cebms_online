@@ -137,7 +137,8 @@ function normalizeGenerateErrorMessage(message: string): string {
 }
 
 export function AnalysisPage() {
-  const { backendReady, currentUser, session } = useAuth();
+  const minimumInitOverlayMs = 1000;
+  const { backendReady, currentUser, session, loading: authLoading } = useAuth();
   const { confirm } = useConfirm();
   const [analyses, setAnalyses] = useState<AnalysisItem[]>([]);
   const [aggregate, setAggregate] = useState<AnalysisAggregate | null>(null);
@@ -149,6 +150,7 @@ export function AnalysisPage() {
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pageNotice, setPageNotice] = useState<string | null>(null);
+  const [initialLoading, setInitialLoading] = useState(true);
   const [selectionType, setSelectionType] = useState<AnalysisSelectionType>("range");
   const [selectedLabel, setSelectedLabel] = useState("--");
   const [analysisMenuOpen, setAnalysisMenuOpen] = useState(false);
@@ -156,11 +158,11 @@ export function AnalysisPage() {
   const [analysisMenuWidth, setAnalysisMenuWidth] = useState(220);
   const [analysisMenuPrimaryWidth, setAnalysisMenuPrimaryWidth] = useState(52);
   const [analysisMenuReady, setAnalysisMenuReady] = useState(false);
-  const [analysisDataHydrated, setAnalysisDataHydrated] = useState(false);
   const [portraitLayout, setPortraitLayout] = useState(window.matchMedia("(orientation: portrait)").matches);
   const analysisToolbarRef = useRef<HTMLDivElement | null>(null);
   const analysisToolbarLabelRef = useRef<HTMLSpanElement | null>(null);
   const analysisMenuRef = useRef<HTMLDivElement | null>(null);
+  const initialLoadingStartedAtRef = useRef(Date.now());
 
   const isDemoMode = !backendReady || !session?.accessToken || !currentUser;
   const visibleAnalyses = analyses.filter((analysis) => analysis.analysisType !== "batch_chunk");
@@ -235,10 +237,6 @@ export function AnalysisPage() {
 
   useLayoutEffect(() => {
     if (!analysisToolbarRef.current || !analysisToolbarLabelRef.current) {
-      return;
-    }
-
-    if (!analysisDataHydrated) {
       return;
     }
 
@@ -335,15 +333,13 @@ export function AnalysisPage() {
     setAnalysisMenuPrimaryWidth(nextPrimaryWidth);
     setAnalysisMenuWidth(nextSubmenuWidth);
     setAnalysisMenuReady(true);
-  }, [analysisDataHydrated, analysisMenuGroup, availableTemplateOptions, portraitLayout, selectedLabel]);
+  }, [analysisMenuGroup, availableTemplateOptions, portraitLayout, selectedLabel]);
 
-  useEffect(() => {
-    if (!analysisDataHydrated) {
-      setAnalysisMenuReady(false);
+  async function loadAnalysisData(markInitialized = false): Promise<{ todayCount: TodayAnalysisCount | null }> {
+    if (markInitialized) {
+      initialLoadingStartedAtRef.current = Date.now();
     }
-  }, [analysisDataHydrated]);
 
-  async function loadAnalysisData(): Promise<{ todayCount: TodayAnalysisCount | null }> {
     if (!session?.accessToken || isDemoMode) {
       setAnalyses([]);
       setAggregate(null);
@@ -352,12 +348,19 @@ export function AnalysisPage() {
       setTemplates([]);
       setError(null);
       setLoading(false);
-      setAnalysisDataHydrated(true);
+      if (markInitialized) {
+        const remaining = Math.max(0, minimumInitOverlayMs - (Date.now() - initialLoadingStartedAtRef.current));
+        window.setTimeout(() => {
+          setInitialLoading(false);
+        }, remaining);
+      }
       return { todayCount: null };
     }
 
     setLoading(true);
-    setAnalysisDataHydrated(false);
+    if (markInitialized) {
+      setInitialLoading(true);
+    }
     setError(null);
     try {
       const [nextAnalyses, nextAggregate, nextTodayCount, nextRecords, nextTemplates] = await Promise.all([
@@ -372,18 +375,23 @@ export function AnalysisPage() {
       setTodayCount(nextTodayCount);
       setRecords(nextRecords);
       setTemplates(nextTemplates);
-      setAnalysisDataHydrated(true);
       return { todayCount: nextTodayCount };
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : "加载数据失败");
       return { todayCount: null };
     } finally {
       setLoading(false);
+      if (markInitialized) {
+        const remaining = Math.max(0, minimumInitOverlayMs - (Date.now() - initialLoadingStartedAtRef.current));
+        window.setTimeout(() => {
+          setInitialLoading(false);
+        }, remaining);
+      }
     }
   }
 
   useEffect(() => {
-    void loadAnalysisData();
+    void loadAnalysisData(true);
   }, [backendReady, currentUser, session]);
 
   async function requestGenerateAnalysis(
@@ -460,6 +468,14 @@ export function AnalysisPage() {
       {pageNotice ? (
         <div className="record-import-toast" role="status" aria-live="polite">
           <span>{pageNotice}</span>
+        </div>
+      ) : null}
+      {authLoading || initialLoading ? (
+        <div className="page-init-overlay" role="status" aria-live="polite">
+          <div className="page-init-overlay__dialog">
+            <div className="page-init-overlay__spinner" aria-hidden="true" />
+            <strong>加载中...</strong>
+          </div>
         </div>
       ) : null}
       {generating ? (

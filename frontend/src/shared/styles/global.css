@@ -209,6 +209,45 @@ textarea {
   height: auto;
 }
 
+.page-init-shell,
+.analysis-page-shell,
+.data-center-layout {
+  position: relative;
+}
+
+.page-init-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 12;
+  display: grid;
+  place-items: center;
+  background: rgba(247, 240, 232, 0.78);
+  backdrop-filter: blur(1px);
+}
+
+.page-init-overlay__dialog {
+  min-width: 180px;
+  padding: 18px 20px;
+  border-radius: 20px;
+  border: 1px solid rgba(104, 73, 51, 0.14);
+  background: rgba(255, 251, 246, 0.92);
+  box-shadow: 0 16px 32px rgba(113, 80, 56, 0.12);
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+  text-align: center;
+  color: #6b4f3d;
+}
+
+.page-init-overlay__spinner {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 3px solid rgba(143, 105, 80, 0.18);
+  border-top-color: #8f6950;
+  animation: analysis-loading-spin 0.9s linear infinite;
+}
+
 .shell--portrait .shell__header {
   align-items: stretch;
 }

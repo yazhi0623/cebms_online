@@ -194,7 +194,7 @@ function normalizeBackupRestoreErrorMessage(message: string): string {
 }
 
 export function DataCenterPage() {
-  const { backendReady, currentUser, session } = useAuth();
+  const { backendReady, currentUser, session, loading: authLoading } = useAuth();
   const [pageError, setPageError] = useState<string | null>(null);
   const [downloadError, setDownloadError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
