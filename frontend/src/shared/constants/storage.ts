@@ -1,3 +1,4 @@
+import type { AnalysisAggregate, AnalysisItem, TodayAnalysisCount } from "../../entities/analysis/types";
 import type { RecordItem } from "../../entities/record/types";
 import type { TemplateItem } from "../../entities/template/types";
 
@@ -7,6 +8,7 @@ export const storageKeys = {
   recordImportNotice: "cebms_record_import_notice",
   recordListCache: "cebms_record_list_cache",
   templateListCache: "cebms_template_list_cache",
+  analysisPreviewCache: "cebms_analysis_preview_cache",
 } as const;
 
 const cacheTtlMs = 1000 * 60 * 15;
@@ -19,6 +21,20 @@ type CachedPayload<T> = {
 
 type RecordListCacheItem = Pick<RecordItem, "id" | "userId" | "templateId" | "title" | "createdAt" | "updatedAt">;
 type TemplateListCacheItem = Pick<TemplateItem, "id" | "userId" | "title" | "isDefault" | "createdAt" | "updatedAt">;
+type AnalysisPreviewCacheItem = Pick<
+  AnalysisItem,
+  | "id"
+  | "userId"
+  | "recordId"
+  | "templateId"
+  | "analysisType"
+  | "title"
+  | "content"
+  | "dayKey"
+  | "createdAt"
+  | "isBatchChunk"
+  | "isFinalSummary"
+>;
 
 export type StoredSession = {
   accessToken: string;
@@ -84,12 +100,24 @@ type TemplateListCache = {
   templates: TemplateListCacheItem[];
 };
 
+type AnalysisPreviewCache = {
+  analyses: AnalysisPreviewCacheItem[];
+  aggregate: AnalysisAggregate | null;
+  todayCount: TodayAnalysisCount | null;
+};
+
 type LoadedRecordListCache = {
   records: RecordItem[];
 };
 
 type LoadedTemplateListCache = {
   templates: TemplateItem[];
+};
+
+type LoadedAnalysisPreviewCache = {
+  analyses: AnalysisItem[];
+  aggregate: AnalysisAggregate | null;
+  todayCount: TodayAnalysisCount | null;
 };
 
 function loadCachedPayload<T>(key: string, userId: number): T | null {
@@ -191,6 +219,54 @@ export function saveTemplateListCache(userId: number, templates: TemplateItem[] 
             createdAt: template.createdAt,
             updatedAt: template.updatedAt,
           })),
+        }
+      : null,
+  );
+}
+
+export function loadAnalysisPreviewCache(userId: number): LoadedAnalysisPreviewCache | null {
+  const cached = loadCachedPayload<AnalysisPreviewCache>(storageKeys.analysisPreviewCache, userId);
+  if (!cached) {
+    return null;
+  }
+
+  return {
+    analyses: cached.analyses,
+    aggregate: cached.aggregate,
+    todayCount: cached.todayCount,
+  };
+}
+
+export function saveAnalysisPreviewCache(
+  userId: number,
+  payload:
+    | {
+        analyses: AnalysisItem[];
+        aggregate: AnalysisAggregate | null;
+        todayCount: TodayAnalysisCount | null;
+      }
+    | null,
+) {
+  saveCachedPayload<AnalysisPreviewCache>(
+    storageKeys.analysisPreviewCache,
+    userId,
+    payload
+      ? {
+          analyses: payload.analyses.slice(0, 2).map((analysis) => ({
+            id: analysis.id,
+            userId: analysis.userId,
+            recordId: analysis.recordId,
+            templateId: analysis.templateId,
+            analysisType: analysis.analysisType,
+            title: analysis.title,
+            content: analysis.content,
+            dayKey: analysis.dayKey,
+            createdAt: analysis.createdAt,
+            isBatchChunk: analysis.isBatchChunk,
+            isFinalSummary: analysis.isFinalSummary,
+          })),
+          aggregate: payload.aggregate,
+          todayCount: payload.todayCount,
         }
       : null,
   );
