@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import type { CSSProperties } from "react";
 
 import { LoginPage } from "../../pages/auth/login-page";
 import { routes } from "../../shared/constants/routes";
@@ -55,13 +56,14 @@ export function AppRouter() {
   const { currentUser, loading, logout } = useAuth();
   const { navigate } = useNavigation();
   const [pathname, setPathname] = useState(window.location.pathname);
+  const [portraitLayout, setPortraitLayout] = useState(window.matchMedia("(orientation: portrait)").matches);
   const [lastContentPath, setLastContentPath] = useState(
     window.location.pathname === routes.login ? routes.records : window.location.pathname,
   );
   const brandMetaRef = useRef<HTMLDivElement | null>(null);
   const subtitleRef = useRef<HTMLParagraphElement | null>(null);
   const compactUserRef = useRef<HTMLSpanElement | null>(null);
-  const sessionRef = useRef<HTMLDivElement | null>(null);
+  const authActionRef = useRef<HTMLButtonElement | null>(null);
 
   useEffect(() => {
     const onPopState = () => {
@@ -80,6 +82,19 @@ export function AppRouter() {
     }
   }, [pathname]);
 
+  useEffect(() => {
+    const mediaQuery = window.matchMedia("(orientation: portrait)");
+    const syncPortraitLayout = (event?: MediaQueryListEvent) => {
+      setPortraitLayout(event?.matches ?? mediaQuery.matches);
+    };
+
+    syncPortraitLayout();
+    mediaQuery.addEventListener("change", syncPortraitLayout);
+    return () => {
+      mediaQuery.removeEventListener("change", syncPortraitLayout);
+    };
+  }, []);
+
   const authModalOpen = !currentUser && pathname === routes.login;
   const currentRoute = resolveRoute(authModalOpen ? lastContentPath : pathname);
   const navRoutes = routeDefinitions.filter((route) => route.navVisible && route.path !== routes.login);
@@ -95,13 +110,7 @@ export function AppRouter() {
         : "shell__content";
 
   useLayoutEffect(() => {
-    if (!brandMetaRef.current || !subtitleRef.current || !compactUserRef.current || !sessionRef.current) {
-      setCompactSessionLabel(sessionLabel);
-      setCompactUserWidth(null);
-      return;
-    }
-
-    if (!currentUser) {
+    if (!brandMetaRef.current || !subtitleRef.current || !compactUserRef.current || !authActionRef.current) {
       setCompactSessionLabel(sessionLabel);
       setCompactUserWidth(null);
       return;
@@ -110,7 +119,8 @@ export function AppRouter() {
     const brandMetaElement = brandMetaRef.current;
     const subtitleElement = subtitleRef.current;
     const compactUserElement = compactUserRef.current;
-    const sessionElement = sessionRef.current;
+    const authActionElement = authActionRef.current;
+    const sourceLabel = currentUser?.username ?? sessionLabel;
 
     const updateLabel = () => {
       const brandMetaStyle = window.getComputedStyle(brandMetaElement);
@@ -120,10 +130,12 @@ export function AppRouter() {
         0,
         brandMetaElement.getBoundingClientRect().width - subtitleElement.getBoundingClientRect().width - gap,
       );
-      const targetWidth = Math.min(sessionElement.getBoundingClientRect().width, availableWidth);
+      const targetWidth = portraitLayout
+        ? authActionElement.getBoundingClientRect().width
+        : Math.min(authActionElement.getBoundingClientRect().width, availableWidth);
 
       if (targetWidth <= 0) {
-        setCompactSessionLabel(currentUser.username);
+        setCompactSessionLabel(sourceLabel);
         setCompactUserWidth(null);
         return;
       }
@@ -137,7 +149,7 @@ export function AppRouter() {
       ].join(" ");
 
       setCompactUserWidth(targetWidth);
-      setCompactSessionLabel(fitMiddleEllipsisToWidth(currentUser.username, targetWidth, font));
+      setCompactSessionLabel(fitMiddleEllipsisToWidth(sourceLabel, targetWidth, font));
     };
 
     updateLabel();
@@ -146,18 +158,27 @@ export function AppRouter() {
     });
     observer.observe(brandMetaElement);
     observer.observe(subtitleElement);
-    observer.observe(sessionElement);
+    observer.observe(authActionElement);
     window.addEventListener("resize", updateLabel);
 
     return () => {
       observer.disconnect();
       window.removeEventListener("resize", updateLabel);
     };
-  }, [currentUser, sessionLabel]);
+  }, [currentUser, portraitLayout, sessionLabel]);
 
   return (
-    <div className="shell">
-      <header className="shell__header">
+    <div
+      className={portraitLayout ? "shell shell--portrait" : "shell"}
+      style={
+        compactUserWidth
+          ? ({
+              "--compact-user-width": `${compactUserWidth}px`,
+            } as CSSProperties)
+          : undefined
+      }
+    >
+      <header className={portraitLayout ? "shell__header shell__header--portrait" : "shell__header"}>
         <div>
           <div className="shell__brand-row">
             <h1 className="shell__title">你一生的故事</h1>
@@ -195,7 +216,7 @@ export function AppRouter() {
               );
             })}
           </nav>
-          <div className="shell__session" ref={sessionRef}>
+          <div className="shell__session">
             <span className="shell__session-text">{sessionTextLabel}</span>
             {currentUser ? (
               <button
@@ -204,6 +225,7 @@ export function AppRouter() {
                   void logout();
                   void navigate(routes.login);
                 }}
+                ref={authActionRef}
                 type="button"
               >
                 退出
@@ -214,6 +236,7 @@ export function AppRouter() {
                 onClick={() => {
                   void navigate(routes.login);
                 }}
+                ref={authActionRef}
                 type="button"
               >
                 登录/注册

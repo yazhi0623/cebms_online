@@ -209,6 +209,81 @@ textarea {
   height: auto;
 }
 
+.shell--portrait .shell__header {
+  align-items: stretch;
+}
+
+.shell--portrait .shell__header > div:first-child {
+  width: 100%;
+}
+
+.shell--portrait .shell__header-actions {
+  width: 100%;
+  justify-content: space-between;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.shell--portrait .shell__brand-row {
+  width: 100%;
+  align-items: baseline;
+  column-gap: 8px;
+  flex-wrap: nowrap;
+  white-space: nowrap;
+}
+
+.shell--portrait .shell__brand-meta {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) var(--compact-user-width, auto);
+  align-items: center;
+  flex: 1 1 auto;
+  min-width: 0;
+  gap: 8px;
+  width: 100%;
+}
+
+.shell--portrait .shell__compact-user {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 100%;
+  margin-left: 0;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-align: center;
+  white-space: nowrap;
+  line-height: 1;
+}
+
+.shell--portrait .shell__nav {
+  flex: 1 1 auto;
+  flex-wrap: nowrap;
+  gap: 8px;
+  min-width: 0;
+}
+
+.shell--portrait .shell__nav .shell__nav-button {
+  min-width: 0;
+  padding: 9px 12px;
+  font-size: 14px;
+  white-space: nowrap;
+}
+
+.shell--portrait .shell__session {
+  width: var(--compact-user-width, auto);
+  flex: 0 0 auto;
+  margin-left: 0;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.shell--portrait .shell__session-text {
+  display: none;
+}
+
 /* 分析页布局、加载态和历史卡片。 */
 .panel-grid {
   display: grid;
@@ -2762,11 +2837,17 @@ textarea {
 }
 
 @media (orientation: portrait) {
+  .shell__header {
+    align-items: stretch;
+  }
+
   .shell__header > div:first-child {
     width: 100%;
   }
 
   .shell__header-actions {
+    width: 100%;
+    justify-content: space-between;
     flex-wrap: nowrap;
     align-items: center;
     gap: 10px;
@@ -2781,10 +2862,13 @@ textarea {
   }
 
   .shell__brand-meta {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
     flex: 1 1 auto;
     min-width: 0;
     gap: 8px;
-    width: auto;
+    width: 100%;
   }
 
   .shell__compact-user {
@@ -2793,11 +2877,12 @@ textarea {
     margin-left: auto;
     overflow: hidden;
     text-overflow: ellipsis;
-    text-align: center;
+    text-align: right;
+    white-space: nowrap;
   }
 
   .shell__nav {
-    flex: 1 1 auto;
+    flex: 1 1 0;
     flex-wrap: nowrap;
     gap: 8px;
     min-width: 0;
@@ -2813,6 +2898,7 @@ textarea {
   .shell__session {
     width: auto;
     flex: 0 0 auto;
+    margin-left: auto;
     justify-content: flex-end;
     gap: 8px;
   }
@@ -2849,19 +2935,20 @@ textarea {
   }
 
   .analysis-menu-shell {
-    max-width: none;
+    width: var(--analysis-menu-shell-width) !important;
+    max-width: calc(100vw - 12px);
   }
 
   .analysis-menu__panel--portrait {
-    --analysis-menu-column-pad-x: 2px;
-    --analysis-menu-item-pad-x: 2px;
+    --analysis-menu-column-pad-x: 4px;
+    --analysis-menu-item-pad-x: 6px;
     max-width: calc(100vw - 12px);
     border-right-width: 0;
   }
 
   .analysis-menu__panel--portrait .analysis-menu__group {
     min-height: 36px;
-    padding: 6px 2px;
+    padding: 6px var(--analysis-menu-item-pad-x);
   }
 
   .analysis-menu__submenu--portrait {

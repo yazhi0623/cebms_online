@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import type { CSSProperties } from "react";
 
 import type { AnalysisAggregate, AnalysisItem, TodayAnalysisCount } from "../../entities/analysis/types";
 import type { RecordItem } from "../../entities/record/types";
@@ -154,11 +155,12 @@ export function AnalysisPage() {
   const [analysisMenuGroup, setAnalysisMenuGroup] = useState<AnalysisSelectionType>("range");
   const [analysisMenuWidth, setAnalysisMenuWidth] = useState(220);
   const [analysisMenuPrimaryWidth, setAnalysisMenuPrimaryWidth] = useState(52);
+  const [analysisMenuReady, setAnalysisMenuReady] = useState(false);
+  const [analysisDataHydrated, setAnalysisDataHydrated] = useState(false);
   const [portraitLayout, setPortraitLayout] = useState(window.matchMedia("(orientation: portrait)").matches);
   const analysisToolbarRef = useRef<HTMLDivElement | null>(null);
   const analysisToolbarLabelRef = useRef<HTMLSpanElement | null>(null);
   const analysisMenuRef = useRef<HTMLDivElement | null>(null);
-  const analysisTriggerRef = useRef<HTMLButtonElement | null>(null);
 
   const isDemoMode = !backendReady || !session?.accessToken || !currentUser;
   const visibleAnalyses = analyses.filter((analysis) => analysis.analysisType !== "batch_chunk");
@@ -232,7 +234,11 @@ export function AnalysisPage() {
   }, [analysisMenuOpen]);
 
   useLayoutEffect(() => {
-    if (!analysisTriggerRef.current || !analysisToolbarRef.current || !analysisToolbarLabelRef.current) {
+    if (!analysisToolbarRef.current || !analysisToolbarLabelRef.current) {
+      return;
+    }
+
+    if (!analysisDataHydrated) {
       return;
     }
 
@@ -246,7 +252,8 @@ export function AnalysisPage() {
       ...analysisRangeOptions.map((option) => option.label),
       ...(availableTemplateOptions.length ? availableTemplateOptions.map((template) => template.title) : ["暂无模板"]),
     ];
-    const submenuLabels = portraitLayout ? [selectedLabel, ...activeSubmenuLabels] : [selectedLabel, ...allSubmenuLabels];
+    void activeSubmenuLabels;
+    const submenuLabels = [selectedLabel, ...allSubmenuLabels];
     const primaryLabels = analysisMenuGroups.map((group) => group.label);
     const minSubmenuWidth = portraitLayout ? 64 : 140;
     const measureShell = document.createElement("div");
@@ -327,7 +334,14 @@ export function AnalysisPage() {
 
     setAnalysisMenuPrimaryWidth(nextPrimaryWidth);
     setAnalysisMenuWidth(nextSubmenuWidth);
-  }, [analysisMenuGroup, availableTemplateOptions, portraitLayout, selectedLabel]);
+    setAnalysisMenuReady(true);
+  }, [analysisDataHydrated, analysisMenuGroup, availableTemplateOptions, portraitLayout, selectedLabel]);
+
+  useEffect(() => {
+    if (!analysisDataHydrated) {
+      setAnalysisMenuReady(false);
+    }
+  }, [analysisDataHydrated]);
 
   async function loadAnalysisData(): Promise<{ todayCount: TodayAnalysisCount | null }> {
     if (!session?.accessToken || isDemoMode) {
@@ -338,10 +352,12 @@ export function AnalysisPage() {
       setTemplates([]);
       setError(null);
       setLoading(false);
+      setAnalysisDataHydrated(true);
       return { todayCount: null };
     }
 
     setLoading(true);
+    setAnalysisDataHydrated(false);
     setError(null);
     try {
       const [nextAnalyses, nextAggregate, nextTodayCount, nextRecords, nextTemplates] = await Promise.all([
@@ -356,6 +372,7 @@ export function AnalysisPage() {
       setTodayCount(nextTodayCount);
       setRecords(nextRecords);
       setTemplates(nextTemplates);
+      setAnalysisDataHydrated(true);
       return { todayCount: nextTodayCount };
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : "加载数据失败");
@@ -478,11 +495,17 @@ export function AnalysisPage() {
         </article>
         <div className="analysis-page-toolbar" ref={analysisToolbarRef}>
           <span className="analysis-page-toolbar__label" ref={analysisToolbarLabelRef}>AI分析</span>
-          <div
-            className="analysis-menu-shell"
-            ref={analysisMenuRef}
-            style={{ width: `${analysisMenuPanelWidth}px` }}
-          >
+          {analysisMenuReady ? (
+            <div
+              className="analysis-menu-shell"
+              ref={analysisMenuRef}
+              style={
+                {
+                  width: `${analysisMenuPanelWidth}px`,
+                  "--analysis-menu-shell-width": `${analysisMenuPanelWidth}px`,
+                } as CSSProperties
+              }
+            >
             <button
               aria-expanded={analysisMenuOpen}
               aria-haspopup="menu"
@@ -492,7 +515,6 @@ export function AnalysisPage() {
                 setAnalysisMenuGroup(selectionType);
                 setAnalysisMenuOpen((current) => !current);
               }}
-              ref={analysisTriggerRef}
               type="button"
             >
               <span className="analysis-menu__trigger-label">{selectedLabel}</span>
@@ -572,7 +594,8 @@ export function AnalysisPage() {
                 </div>
               </div>
             ) : null}
-          </div>
+            </div>
+          ) : null}
         </div>
         <article className="panel panel--wide analysis-panel analysis-panel--history">
           <h2 className="panel__title">分析历史</h2>
