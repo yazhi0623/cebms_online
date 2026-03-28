@@ -14,9 +14,7 @@ import {
 import { fetchRecords } from "../../features/record/api";
 import { fetchTemplates } from "../../features/template/api";
 import {
-  loadAnalysisPreviewCache,
   loadTemplateListCache,
-  saveAnalysisPreviewCache,
   saveTemplateListCache,
 } from "../../shared/constants/storage";
 import { uiTiming } from "../../shared/constants/ui";
@@ -365,17 +363,10 @@ export function AnalysisPage() {
     let hasWarmCache = false;
     if (markInitialized) {
       const cachedTemplates = loadTemplateListCache(currentUser.id);
-      const cachedPreview = loadAnalysisPreviewCache(currentUser.id);
-      hasWarmCache = Boolean(cachedTemplates?.templates.length || cachedPreview);
+      hasWarmCache = Boolean(cachedTemplates?.templates.length);
 
       if (cachedTemplates?.templates.length) {
         setTemplates(cachedTemplates.templates);
-      }
-
-      if (cachedPreview) {
-        setAnalyses(cachedPreview.analyses);
-        setAggregate(cachedPreview.aggregate);
-        setTodayCount(cachedPreview.todayCount);
       }
 
       if (!hasWarmCache) {
@@ -402,11 +393,6 @@ export function AnalysisPage() {
       setRecords(nextRecords);
       setTemplates(nextTemplates);
       saveTemplateListCache(currentUser.id, nextTemplates);
-      saveAnalysisPreviewCache(currentUser.id, {
-        analyses: nextAnalyses.filter((analysis) => analysis.analysisType !== "batch_chunk"),
-        aggregate: nextAggregate,
-        todayCount: nextTodayCount,
-      });
       return { todayCount: nextTodayCount };
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : "加载数据失败");

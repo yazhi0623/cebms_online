@@ -1,4 +1,3 @@
-import type { AnalysisAggregate, AnalysisItem, TodayAnalysisCount } from "../../entities/analysis/types";
 import type { RecordItem } from "../../entities/record/types";
 import type { TemplateItem } from "../../entities/template/types";
 
@@ -8,7 +7,6 @@ export const storageKeys = {
   recordImportNotice: "cebms_record_import_notice",
   recordListCache: "cebms_record_list_cache",
   templateListCache: "cebms_template_list_cache",
-  analysisPreviewCache: "cebms_analysis_preview_cache",
 } as const;
 
 const cacheTtlMs = 1000 * 60 * 15;
@@ -18,6 +16,9 @@ type CachedPayload<T> = {
   savedAt: number;
   data: T;
 };
+
+type RecordListCacheItem = Pick<RecordItem, "id" | "userId" | "templateId" | "title" | "createdAt" | "updatedAt">;
+type TemplateListCacheItem = Pick<TemplateItem, "id" | "userId" | "title" | "isDefault" | "createdAt" | "updatedAt">;
 
 export type StoredSession = {
   accessToken: string;
@@ -76,17 +77,19 @@ export function saveRecordImportNotice(notice: RecordImportNotice | null) {
 }
 
 type RecordListCache = {
-  records: RecordItem[];
+  records: RecordListCacheItem[];
 };
 
 type TemplateListCache = {
-  templates: TemplateItem[];
+  templates: TemplateListCacheItem[];
 };
 
-type AnalysisPreviewCache = {
-  analyses: AnalysisItem[];
-  aggregate: AnalysisAggregate | null;
-  todayCount: TodayAnalysisCount | null;
+type LoadedRecordListCache = {
+  records: RecordItem[];
+};
+
+type LoadedTemplateListCache = {
+  templates: TemplateItem[];
 };
 
 function loadCachedPayload<T>(key: string, userId: number): T | null {
@@ -127,46 +130,67 @@ function saveCachedPayload<T>(key: string, userId: number, data: T | null) {
   window.localStorage.setItem(key, JSON.stringify(payload));
 }
 
-export function loadRecordListCache(userId: number): RecordListCache | null {
-  return loadCachedPayload<RecordListCache>(storageKeys.recordListCache, userId);
+export function loadRecordListCache(userId: number): LoadedRecordListCache | null {
+  const cached = loadCachedPayload<RecordListCache>(storageKeys.recordListCache, userId);
+  if (!cached) {
+    return null;
+  }
+
+  return {
+    records: cached.records.map((record) => ({
+      ...record,
+      content: "",
+    })),
+  };
 }
 
 export function saveRecordListCache(userId: number, records: RecordItem[] | null) {
   saveCachedPayload<RecordListCache>(
     storageKeys.recordListCache,
     userId,
-    records ? { records: records.slice(0, 10) } : null,
+    records
+      ? {
+          records: records.slice(0, 10).map((record) => ({
+            id: record.id,
+            userId: record.userId,
+            templateId: record.templateId,
+            title: record.title,
+            createdAt: record.createdAt,
+            updatedAt: record.updatedAt,
+          })),
+        }
+      : null,
   );
 }
 
-export function loadTemplateListCache(userId: number): TemplateListCache | null {
-  return loadCachedPayload<TemplateListCache>(storageKeys.templateListCache, userId);
+export function loadTemplateListCache(userId: number): LoadedTemplateListCache | null {
+  const cached = loadCachedPayload<TemplateListCache>(storageKeys.templateListCache, userId);
+  if (!cached) {
+    return null;
+  }
+
+  return {
+    templates: cached.templates.map((template) => ({
+      ...template,
+      content: "",
+    })),
+  };
 }
 
 export function saveTemplateListCache(userId: number, templates: TemplateItem[] | null) {
   saveCachedPayload<TemplateListCache>(
     storageKeys.templateListCache,
     userId,
-    templates ? { templates } : null,
-  );
-}
-
-export function loadAnalysisPreviewCache(userId: number): AnalysisPreviewCache | null {
-  return loadCachedPayload<AnalysisPreviewCache>(storageKeys.analysisPreviewCache, userId);
-}
-
-export function saveAnalysisPreviewCache(
-  userId: number,
-  preview: { analyses: AnalysisItem[]; aggregate: AnalysisAggregate | null; todayCount: TodayAnalysisCount | null } | null,
-) {
-  saveCachedPayload<AnalysisPreviewCache>(
-    storageKeys.analysisPreviewCache,
-    userId,
-    preview
+    templates
       ? {
-          analyses: preview.analyses.slice(0, 10),
-          aggregate: preview.aggregate,
-          todayCount: preview.todayCount,
+          templates: templates.map((template) => ({
+            id: template.id,
+            userId: template.userId,
+            title: template.title,
+            isDefault: template.isDefault,
+            createdAt: template.createdAt,
+            updatedAt: template.updatedAt,
+          })),
         }
       : null,
   );
