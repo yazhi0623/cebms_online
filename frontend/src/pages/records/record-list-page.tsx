@@ -59,7 +59,7 @@ export function RecordListPage() {
   }, [workspace.hasUnsavedChanges]);
 
   function toggleCompactPanel(nextPanel: "records" | "templates") {
-    setCompactPanel((current) => (current === nextPanel ? null : nextPanel));
+    setCompactPanel(nextPanel);
   }
 
   function handleSelectRecord(recordId: number) {
@@ -127,7 +127,11 @@ export function RecordListPage() {
           <div className="record-workspace__compact-switches" aria-label="记录页侧栏入口">
             <button
               aria-pressed={compactPanel === "records"}
-              className={compactPanel === "records" ? "shell__nav-button shell__nav-button--active" : "shell__nav-button"}
+              className={
+                compactPanel === "records"
+                  ? "shell__nav-button shell__nav-button--active shell__nav-button--pressable"
+                  : "shell__nav-button shell__nav-button--pressable"
+              }
               onClick={() => toggleCompactPanel("records")}
               type="button"
             >
@@ -135,7 +139,11 @@ export function RecordListPage() {
             </button>
             <button
               aria-pressed={compactPanel === "templates"}
-              className={compactPanel === "templates" ? "shell__nav-button shell__nav-button--active" : "shell__nav-button"}
+              className={
+                compactPanel === "templates"
+                  ? "shell__nav-button shell__nav-button--active shell__nav-button--pressable"
+                  : "shell__nav-button shell__nav-button--pressable"
+              }
               onClick={() => toggleCompactPanel("templates")}
               type="button"
             >
