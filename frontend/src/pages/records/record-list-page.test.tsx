@@ -2,7 +2,9 @@ import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import { AppRouter } from "../../app/router";
 import { ConfirmProvider } from "../../app/providers/confirm-provider";
+import { NavigationProvider } from "../../app/providers/navigation-provider";
 import { RecordListPage } from "./record-list-page";
 
 vi.mock("../../shared/hooks/use-auth", () => ({
@@ -15,6 +17,7 @@ vi.mock("../../shared/hooks/use-auth", () => ({
 
 describe("RecordListPage", () => {
   beforeEach(() => {
+    window.history.pushState({}, "", "/records");
     Object.defineProperty(window, "matchMedia", {
       writable: true,
       value: vi.fn().mockImplementation(() => ({
@@ -34,9 +37,11 @@ describe("RecordListPage", () => {
     const user = userEvent.setup();
 
     render(
-      <ConfirmProvider>
-        <RecordListPage />
-      </ConfirmProvider>,
+      <NavigationProvider>
+        <ConfirmProvider>
+          <RecordListPage />
+        </ConfirmProvider>
+      </NavigationProvider>,
     );
 
     await user.click(screen.getByRole("button", { name: /情绪起伏的一天/ }));
@@ -51,9 +56,11 @@ describe("RecordListPage", () => {
     const user = userEvent.setup();
 
     render(
-      <ConfirmProvider>
-        <RecordListPage />
-      </ConfirmProvider>,
+      <NavigationProvider>
+        <ConfirmProvider>
+          <RecordListPage />
+        </ConfirmProvider>
+      </NavigationProvider>,
     );
 
     await user.click(screen.getByRole("button", { name: /情绪起伏的一天/ }));
@@ -62,18 +69,20 @@ describe("RecordListPage", () => {
 
     const dialog = await screen.findByRole("dialog");
     expect(dialog).toBeInTheDocument();
-    expect(within(dialog).getByText("是否更新该记录？")).toBeInTheDocument();
+    expect(within(dialog).getByText("是否放弃未保存的修改？")).toBeInTheDocument();
     expect(within(dialog).getByRole("button", { name: "舍弃" })).toBeInTheDocument();
     expect(within(dialog).getByRole("button", { name: "保存" })).toBeInTheDocument();
   });
 
-  it("opens keep-or-discard confirm dialog when the new record draft already has text", async () => {
+  it("opens unified confirm dialog when the new record draft already has text", async () => {
     const user = userEvent.setup();
 
     render(
-      <ConfirmProvider>
-        <RecordListPage />
-      </ConfirmProvider>,
+      <NavigationProvider>
+        <ConfirmProvider>
+          <RecordListPage />
+        </ConfirmProvider>
+      </NavigationProvider>,
     );
 
     await user.click(screen.getAllByRole("button", { name: "新增" })[0]);
@@ -82,40 +91,133 @@ describe("RecordListPage", () => {
 
     const dialog = await screen.findByRole("dialog");
     expect(dialog).toBeInTheDocument();
-    expect(within(dialog).getByText("正在编辑记录，需要保留该记录吗？")).toBeInTheDocument();
+    expect(within(dialog).getByText("是否放弃未保存的修改？")).toBeInTheDocument();
     expect(within(dialog).getByRole("button", { name: "舍弃" })).toBeInTheDocument();
-    expect(within(dialog).getByRole("button", { name: "保留" })).toBeInTheDocument();
+    expect(within(dialog).getByRole("button", { name: "保存" })).toBeInTheDocument();
   });
 
-  it("opens keep-or-discard confirm dialog when the new template draft already has text", async () => {
+  it("opens unified confirm dialog when switching template with unsaved text", async () => {
     const user = userEvent.setup();
 
     render(
-      <ConfirmProvider>
-        <RecordListPage />
-      </ConfirmProvider>,
+      <NavigationProvider>
+        <ConfirmProvider>
+          <RecordListPage />
+        </ConfirmProvider>
+      </NavigationProvider>,
     );
 
     await user.click(screen.getByRole("button", { name: "展开模板列表" }));
     await user.click(screen.getAllByRole("button", { name: "新增" })[1]);
-    await user.click(screen.getByRole("button", { name: "舍弃" }));
     await user.type(screen.getByPlaceholderText("请输入模板标题"), "新的模板草稿");
-    await user.click(screen.getAllByRole("button", { name: "新增" })[1]);
+    await user.click(screen.getByRole("button", { name: /夜间复盘模板/ }));
 
     const dialog = await screen.findByRole("dialog");
     expect(dialog).toBeInTheDocument();
-    expect(within(dialog).getByText("正在编辑模板，需要保留该模板吗？")).toBeInTheDocument();
+    expect(within(dialog).getByText("是否放弃未保存的修改？")).toBeInTheDocument();
     expect(within(dialog).getByRole("button", { name: "舍弃" })).toBeInTheDocument();
-    expect(within(dialog).getByRole("button", { name: "保留" })).toBeInTheDocument();
+    expect(within(dialog).getByRole("button", { name: "保存" })).toBeInTheDocument();
+  });
+
+  it("opens unified confirm dialog when navigating away with unsaved text", async () => {
+    const user = userEvent.setup();
+
+    render(
+      <NavigationProvider>
+        <ConfirmProvider>
+          <AppRouter />
+        </ConfirmProvider>
+      </NavigationProvider>,
+    );
+
+    await user.click(screen.getAllByRole("button", { name: "新增" })[0]);
+    await user.type(screen.getByPlaceholderText("请输入记录标题"), "未保存草稿");
+    await user.click(screen.getByRole("button", { name: "AI分析" }));
+
+    const dialog = await screen.findByRole("dialog");
+    expect(dialog).toBeInTheDocument();
+    expect(within(dialog).getByText("是否放弃未保存的修改？")).toBeInTheDocument();
+    expect(within(dialog).getByRole("button", { name: "舍弃" })).toBeInTheDocument();
+    expect(within(dialog).getByRole("button", { name: "保存" })).toBeInTheDocument();
+  });
+
+  it("shows record validation in footer and toast when saving with empty title", async () => {
+    const user = userEvent.setup();
+
+    render(
+      <NavigationProvider>
+        <ConfirmProvider>
+          <RecordListPage />
+        </ConfirmProvider>
+      </NavigationProvider>,
+    );
+
+    await user.click(screen.getAllByRole("button", { name: "新增" })[0]);
+    await user.type(screen.getByPlaceholderText("自由记录当天的想法、事件、情绪和行为"), "只有内容");
+    await user.click(screen.getByRole("button", { name: "保存" }));
+
+    expect(screen.getAllByText("请输入记录标题").length).toBeGreaterThanOrEqual(2);
+    expect(screen.getByRole("status")).toHaveTextContent("请输入记录标题");
+  });
+
+  it("shows template validation in footer and toast, but not in template sidebar", async () => {
+    const user = userEvent.setup();
+
+    render(
+      <NavigationProvider>
+        <ConfirmProvider>
+          <RecordListPage />
+        </ConfirmProvider>
+      </NavigationProvider>,
+    );
+
+    await user.click(screen.getByRole("button", { name: "展开模板列表" }));
+    await user.click(screen.getAllByRole("button", { name: "新增" })[1]);
+    await user.type(screen.getByPlaceholderText("请输入模板内容"), "只有模板内容");
+    await user.click(screen.getByRole("button", { name: "保存模板" }));
+
+    expect(screen.getAllByText("请输入模板标题").length).toBeGreaterThanOrEqual(2);
+    expect(screen.getByRole("status")).toHaveTextContent("请输入模板标题");
+
+    const templateSidebar = screen.getByRole("heading", { name: "模板列表" }).closest("aside");
+    expect(templateSidebar).not.toBeNull();
+    expect(within(templateSidebar!).queryByText("请输入模板标题")).not.toBeInTheDocument();
+  });
+
+  it("shows template validation toast when confirm-save is pressed with missing title", async () => {
+    const user = userEvent.setup();
+
+    render(
+      <NavigationProvider>
+        <ConfirmProvider>
+          <AppRouter />
+        </ConfirmProvider>
+      </NavigationProvider>,
+    );
+
+    await user.click(screen.getByRole("button", { name: "展开模板列表" }));
+    await user.click(screen.getAllByRole("button", { name: "新增" })[1]);
+    await user.type(screen.getByPlaceholderText("请输入模板内容"), "只有模板内容");
+    await user.click(screen.getByRole("button", { name: "AI分析" }));
+    await user.click(within(await screen.findByRole("dialog")).getByRole("button", { name: "保存" }));
+
+    expect(screen.getAllByText("请输入模板标题").length).toBeGreaterThanOrEqual(2);
+    expect(screen.getByRole("status")).toHaveTextContent("请输入模板标题");
+
+    const templateSidebar = screen.getByRole("heading", { name: "模板列表" }).closest("aside");
+    expect(templateSidebar).not.toBeNull();
+    expect(within(templateSidebar!).queryByText("请输入模板标题")).not.toBeInTheDocument();
   });
 
   it("shows pressed state immediately on pointer interaction", async () => {
     const user = userEvent.setup();
 
     render(
-      <ConfirmProvider>
-        <RecordListPage />
-      </ConfirmProvider>,
+      <NavigationProvider>
+        <ConfirmProvider>
+          <RecordListPage />
+        </ConfirmProvider>
+      </NavigationProvider>,
     );
 
     const newButton = screen.getAllByRole("button", { name: "新增" })[0];
