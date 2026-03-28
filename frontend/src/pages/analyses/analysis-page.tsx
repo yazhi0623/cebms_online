@@ -13,6 +13,12 @@ import {
 } from "../../features/analysis/api";
 import { fetchRecords } from "../../features/record/api";
 import { fetchTemplates } from "../../features/template/api";
+import {
+  loadAnalysisPreviewCache,
+  loadTemplateListCache,
+  saveAnalysisPreviewCache,
+  saveTemplateListCache,
+} from "../../shared/constants/storage";
 import { uiTiming } from "../../shared/constants/ui";
 import { useAuth } from "../../shared/hooks/use-auth";
 import { useConfirm } from "../../shared/hooks/use-confirm";
@@ -336,11 +342,10 @@ export function AnalysisPage() {
   }, [analysisMenuGroup, availableTemplateOptions, portraitLayout, selectedLabel]);
 
   async function loadAnalysisData(markInitialized = false): Promise<{ todayCount: TodayAnalysisCount | null }> {
-    if (markInitialized) {
-      initialLoadingStartedAtRef.current = Date.now();
-    }
-
     if (!session?.accessToken || isDemoMode) {
+      if (markInitialized) {
+        initialLoadingStartedAtRef.current = Date.now();
+      }
       setAnalyses([]);
       setAggregate(null);
       setTodayCount(null);
@@ -357,9 +362,30 @@ export function AnalysisPage() {
       return { todayCount: null };
     }
 
+    let hasWarmCache = false;
+    if (markInitialized) {
+      const cachedTemplates = loadTemplateListCache(currentUser.id);
+      const cachedPreview = loadAnalysisPreviewCache(currentUser.id);
+      hasWarmCache = Boolean(cachedTemplates?.templates.length || cachedPreview);
+
+      if (cachedTemplates?.templates.length) {
+        setTemplates(cachedTemplates.templates);
+      }
+
+      if (cachedPreview) {
+        setAnalyses(cachedPreview.analyses);
+        setAggregate(cachedPreview.aggregate);
+        setTodayCount(cachedPreview.todayCount);
+      }
+
+      if (!hasWarmCache) {
+        initialLoadingStartedAtRef.current = Date.now();
+      }
+    }
+
     setLoading(true);
     if (markInitialized) {
-      setInitialLoading(true);
+      setInitialLoading(!hasWarmCache);
     }
     setError(null);
     try {
@@ -375,6 +401,12 @@ export function AnalysisPage() {
       setTodayCount(nextTodayCount);
       setRecords(nextRecords);
       setTemplates(nextTemplates);
+      saveTemplateListCache(currentUser.id, nextTemplates);
+      saveAnalysisPreviewCache(currentUser.id, {
+        analyses: nextAnalyses.filter((analysis) => analysis.analysisType !== "batch_chunk"),
+        aggregate: nextAggregate,
+        todayCount: nextTodayCount,
+      });
       return { todayCount: nextTodayCount };
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : "加载数据失败");
@@ -382,10 +414,14 @@ export function AnalysisPage() {
     } finally {
       setLoading(false);
       if (markInitialized) {
-        const remaining = Math.max(0, minimumInitOverlayMs - (Date.now() - initialLoadingStartedAtRef.current));
-        window.setTimeout(() => {
+        if (hasWarmCache) {
           setInitialLoading(false);
-        }, remaining);
+        } else {
+          const remaining = Math.max(0, minimumInitOverlayMs - (Date.now() - initialLoadingStartedAtRef.current));
+          window.setTimeout(() => {
+            setInitialLoading(false);
+          }, remaining);
+        }
       }
     }
   }

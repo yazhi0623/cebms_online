@@ -6,7 +6,14 @@ import { createRecord, deleteRecord, fetchRecords, updateRecord } from "../../fe
 import { demoRecords } from "../../features/record/demo-data";
 import { createTemplate, deleteTemplate, fetchTemplates, updateTemplate } from "../../features/template/api";
 import { demoTemplates } from "../../features/template/demo-data";
-import { loadRecordImportNotice, saveRecordImportNotice } from "../../shared/constants/storage";
+import {
+  loadRecordImportNotice,
+  loadRecordListCache,
+  loadTemplateListCache,
+  saveRecordImportNotice,
+  saveRecordListCache,
+  saveTemplateListCache,
+} from "../../shared/constants/storage";
 import { uiTiming } from "../../shared/constants/ui";
 import { useAuth } from "../../shared/hooks/use-auth";
 import { useConfirm } from "../../shared/hooks/use-confirm";
@@ -116,9 +123,8 @@ export function useRecordWorkspace() {
     let active = true;
 
     async function loadWorkspaceData() {
-      initialLoadingStartedAtRef.current = Date.now();
-
       if (!backendReady || !session?.accessToken || !currentUser) {
+        initialLoadingStartedAtRef.current = Date.now();
         // 后端不可用或未登录时进入 demo 模式，保证页面仍可演示和阅读。
         setRecords(demoRecords);
         setTemplates(demoTemplates);
@@ -139,9 +145,25 @@ export function useRecordWorkspace() {
         return;
       }
 
+      const cachedRecords = loadRecordListCache(currentUser.id);
+      const cachedTemplates = loadTemplateListCache(currentUser.id);
+      const hasWarmCache = Boolean(cachedRecords?.records.length || cachedTemplates?.templates.length);
+
+      if (cachedRecords?.records.length) {
+        setRecords(cachedRecords.records);
+      }
+
+      if (cachedTemplates?.templates.length) {
+        setTemplates(sortTemplates(cachedTemplates.templates));
+      }
+
+      if (!hasWarmCache) {
+        initialLoadingStartedAtRef.current = Date.now();
+      }
+
       setRecordsLoading(true);
       setTemplatesLoading(true);
-      setInitialLoading(true);
+      setInitialLoading(!hasWarmCache);
       setError(null);
       setTemplateSidebarError(null);
       setTemplateError(null);
@@ -158,6 +180,8 @@ export function useRecordWorkspace() {
 
         setRecords(nextRecords);
         setTemplates(sortTemplates(nextTemplates));
+        saveRecordListCache(currentUser.id, nextRecords);
+        saveTemplateListCache(currentUser.id, nextTemplates);
         setSelectedRecordIds((currentIds) => currentIds.filter((id) => nextRecords.some((record) => record.id === id)));
         setSelectedRecordId((currentSelected) =>
           currentSelected && nextRecords.some((record) => record.id === currentSelected) ? currentSelected : null,
@@ -180,12 +204,16 @@ export function useRecordWorkspace() {
         if (active) {
           setRecordsLoading(false);
           setTemplatesLoading(false);
-          const remaining = Math.max(0, minimumInitOverlayMs - (Date.now() - initialLoadingStartedAtRef.current));
-          window.setTimeout(() => {
-            if (active) {
-              setInitialLoading(false);
-            }
-          }, remaining);
+          if (hasWarmCache) {
+            setInitialLoading(false);
+          } else {
+            const remaining = Math.max(0, minimumInitOverlayMs - (Date.now() - initialLoadingStartedAtRef.current));
+            window.setTimeout(() => {
+              if (active) {
+                setInitialLoading(false);
+              }
+            }, remaining);
+          }
         }
       }
     }
