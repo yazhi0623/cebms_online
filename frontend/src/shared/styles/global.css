@@ -2867,6 +2867,7 @@ textarea {
 
   .record-workspace--compact .record-editor-shell {
     grid-column: auto;
+    grid-row: 2 / 4;
     min-height: 0;
     height: 100%;
     overflow: hidden;
