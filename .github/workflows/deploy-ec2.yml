@@ -138,11 +138,9 @@ jobs:
             docker compose --env-file .env.prod -f "${{ env.DEPLOY_COMPOSE_FILE }}" up -d
             for i in $(seq 1 20); do
               if curl --fail --silent -H "Host: ${{ env.DEPLOY_HEALTH_HOST }}" "${{ env.DEPLOY_HEALTH_URL }}" > /dev/null; then
-                echo "Health check passed on attempt ${i}"
-                rm -f "./${{ env.DEPLOY_CLEANUP_LOG }}.2"
-                if [ -f "./${{ env.DEPLOY_CLEANUP_LOG }}.1" ]; then mv "./${{ env.DEPLOY_CLEANUP_LOG }}.1" "./${{ env.DEPLOY_CLEANUP_LOG }}.2"; fi
-                if [ -f "./${{ env.DEPLOY_CLEANUP_LOG }}" ]; then mv "./${{ env.DEPLOY_CLEANUP_LOG }}" "./${{ env.DEPLOY_CLEANUP_LOG }}.1"; fi
-                echo "Starting cleanup script..." | tee "./${{ env.DEPLOY_CLEANUP_LOG }}"
+                rm -f "./${{ env.DEPLOY_CLEANUP_LOG }}"
+                echo "Health check passed on attempt ${i}" | tee "./${{ env.DEPLOY_CLEANUP_LOG }}"
+                echo "Starting cleanup script..." | tee -a "./${{ env.DEPLOY_CLEANUP_LOG }}"
                 echo "Disk usage before cleanup:" | tee -a "./${{ env.DEPLOY_CLEANUP_LOG }}"
                 df -h | tee -a "./${{ env.DEPLOY_CLEANUP_LOG }}"
                 docker system df | tee -a "./${{ env.DEPLOY_CLEANUP_LOG }}"
@@ -151,6 +149,8 @@ jobs:
                 DEPLOY_JOURNAL_VACUUM_TIME="${{ env.DEPLOY_JOURNAL_VACUUM_TIME }}" \
                 sh "./${{ env.DEPLOY_CLEANUP_SCRIPT }}" 2>&1 | tee -a "./${{ env.DEPLOY_CLEANUP_LOG }}"
                 echo "Cleanup script finished." | tee -a "./${{ env.DEPLOY_CLEANUP_LOG }}"
+                echo "Cleanup log output:" 
+                cat "./${{ env.DEPLOY_CLEANUP_LOG }}"
                 exit 0
               fi
               echo "Health check not ready on attempt ${i}, waiting..."
