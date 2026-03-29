@@ -22,6 +22,7 @@ jobs:
       DEPLOY_HEALTH_URL: http://127.0.0.1/health
       DEPLOY_HEALTH_HOST: 52.77.76.22
       DEPLOY_CLEANUP_SCRIPT: post-deploy-cleanup.sh
+      DEPLOY_CLEANUP_LOG: post-deploy-cleanup.log
       DEPLOY_IMAGE_PRUNE_UNTIL: 168h
       DEPLOY_BUILDER_PRUNE_UNTIL: 168h
       DEPLOY_JOURNAL_VACUUM_TIME: 7d
@@ -138,10 +139,18 @@ jobs:
             for i in $(seq 1 20); do
               if curl --fail --silent -H "Host: ${{ env.DEPLOY_HEALTH_HOST }}" "${{ env.DEPLOY_HEALTH_URL }}" > /dev/null; then
                 echo "Health check passed on attempt ${i}"
+                rm -f "./${{ env.DEPLOY_CLEANUP_LOG }}.2"
+                if [ -f "./${{ env.DEPLOY_CLEANUP_LOG }}.1" ]; then mv "./${{ env.DEPLOY_CLEANUP_LOG }}.1" "./${{ env.DEPLOY_CLEANUP_LOG }}.2"; fi
+                if [ -f "./${{ env.DEPLOY_CLEANUP_LOG }}" ]; then mv "./${{ env.DEPLOY_CLEANUP_LOG }}" "./${{ env.DEPLOY_CLEANUP_LOG }}.1"; fi
+                echo "Starting cleanup script..." | tee "./${{ env.DEPLOY_CLEANUP_LOG }}"
+                echo "Disk usage before cleanup:" | tee -a "./${{ env.DEPLOY_CLEANUP_LOG }}"
+                df -h | tee -a "./${{ env.DEPLOY_CLEANUP_LOG }}"
+                docker system df | tee -a "./${{ env.DEPLOY_CLEANUP_LOG }}"
                 DEPLOY_IMAGE_PRUNE_UNTIL="${{ env.DEPLOY_IMAGE_PRUNE_UNTIL }}" \
                 DEPLOY_BUILDER_PRUNE_UNTIL="${{ env.DEPLOY_BUILDER_PRUNE_UNTIL }}" \
                 DEPLOY_JOURNAL_VACUUM_TIME="${{ env.DEPLOY_JOURNAL_VACUUM_TIME }}" \
-                sh "./${{ env.DEPLOY_CLEANUP_SCRIPT }}"
+                sh "./${{ env.DEPLOY_CLEANUP_SCRIPT }}" 2>&1 | tee -a "./${{ env.DEPLOY_CLEANUP_LOG }}"
+                echo "Cleanup script finished." | tee -a "./${{ env.DEPLOY_CLEANUP_LOG }}"
                 exit 0
               fi
               echo "Health check not ready on attempt ${i}, waiting..."
