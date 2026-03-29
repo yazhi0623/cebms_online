@@ -164,3 +164,21 @@ jobs:
             echo "Cleanup script finished." | tee -a "./${{ env.DEPLOY_CLEANUP_LOG }}"
             echo "Cleanup log output:"
             cat "./${{ env.DEPLOY_CLEANUP_LOG }}"
+
+      - name: Print cleanup log from EC2
+        if: ${{ success() }}
+        uses: appleboy/ssh-action@v1.2.2
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USERNAME }}
+          key: ${{ secrets.EC2_SSH_PRIVATE_KEY }}
+          script: |
+            set -e
+            cd "${{ secrets.EC2_DEPLOY_PATH }}"
+            if [ -f "./${{ env.DEPLOY_CLEANUP_LOG }}" ]; then
+              echo "Remote cleanup log:"
+              cat "./${{ env.DEPLOY_CLEANUP_LOG }}"
+            else
+              echo "Cleanup log not found: ./${{ env.DEPLOY_CLEANUP_LOG }}"
+              exit 1
+            fi
