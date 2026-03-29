@@ -21,6 +21,7 @@ jobs:
       DEPLOY_COMPOSE_FILE: docker-compose.prod.image-based.yml
       DEPLOY_HEALTH_URL: http://127.0.0.1/health
       DEPLOY_HEALTH_HOST: 52.77.76.22
+      DEPLOY_CLEANUP_SCRIPT: post-deploy-cleanup.sh
       DEPLOY_IMAGE_PRUNE_UNTIL: 168h
       DEPLOY_BUILDER_PRUNE_UNTIL: 168h
       DEPLOY_JOURNAL_VACUUM_TIME: 7d
@@ -73,6 +74,10 @@ jobs:
         working-directory: frontend
         run: npm run build
 
+      - name: Validate post-deploy cleanup script
+        shell: bash
+        run: sh -n deploy/aws-ubuntu-docker-private-api/post-deploy-cleanup.sh
+
       - name: Log in to GHCR
         uses: docker/login-action@v3
         with:
@@ -123,7 +128,8 @@ jobs:
           script: |
             set -e
             cd "${{ secrets.EC2_DEPLOY_PATH }}"
-            chmod +x ./post-deploy-cleanup.sh
+            test -f "./${{ env.DEPLOY_CLEANUP_SCRIPT }}"
+            chmod +x "./${{ env.DEPLOY_CLEANUP_SCRIPT }}"
             echo "${{ secrets.GHCR_TOKEN }}" | docker login ghcr.io -u "${{ secrets.GHCR_USERNAME }}" --password-stdin
             docker compose --env-file .env.prod -f docker-compose.prod.yml down --remove-orphans || true
             docker compose --env-file .env.prod -f "${{ env.DEPLOY_COMPOSE_FILE }}" down --remove-orphans || true
@@ -135,7 +141,7 @@ jobs:
                 DEPLOY_IMAGE_PRUNE_UNTIL="${{ env.DEPLOY_IMAGE_PRUNE_UNTIL }}" \
                 DEPLOY_BUILDER_PRUNE_UNTIL="${{ env.DEPLOY_BUILDER_PRUNE_UNTIL }}" \
                 DEPLOY_JOURNAL_VACUUM_TIME="${{ env.DEPLOY_JOURNAL_VACUUM_TIME }}" \
-                sh ./post-deploy-cleanup.sh
+                sh "./${{ env.DEPLOY_CLEANUP_SCRIPT }}"
                 exit 0
               fi
               echo "Health check not ready on attempt ${i}, waiting..."
