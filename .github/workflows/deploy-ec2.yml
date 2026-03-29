@@ -21,6 +21,9 @@ jobs:
       DEPLOY_COMPOSE_FILE: docker-compose.prod.image-based.yml
       DEPLOY_HEALTH_URL: http://127.0.0.1/health
       DEPLOY_HEALTH_HOST: 52.77.76.22
+      DEPLOY_IMAGE_PRUNE_UNTIL: 168h
+      DEPLOY_BUILDER_PRUNE_UNTIL: 168h
+      DEPLOY_JOURNAL_VACUUM_TIME: 7d
 
     steps:
       - name: Checkout repository
@@ -100,6 +103,17 @@ jobs:
             ghcr.io/${{ steps.meta.outputs.owner_lower }}/cebms-frontend:prod
             ghcr.io/${{ steps.meta.outputs.owner_lower }}/cebms-frontend:sha-${{ steps.meta.outputs.short_sha }}
 
+      - name: Upload post-deploy cleanup script
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USERNAME }}
+          key: ${{ secrets.EC2_SSH_PRIVATE_KEY }}
+          source: deploy/aws-ubuntu-docker-private-api/post-deploy-cleanup.sh
+          target: ${{ secrets.EC2_DEPLOY_PATH }}
+          strip_components: 2
+          overwrite: true
+
       - name: Deploy on EC2
         uses: appleboy/ssh-action@v1.2.2
         with:
@@ -109,6 +123,7 @@ jobs:
           script: |
             set -e
             cd "${{ secrets.EC2_DEPLOY_PATH }}"
+            chmod +x ./post-deploy-cleanup.sh
             echo "${{ secrets.GHCR_TOKEN }}" | docker login ghcr.io -u "${{ secrets.GHCR_USERNAME }}" --password-stdin
             docker compose --env-file .env.prod -f docker-compose.prod.yml down --remove-orphans || true
             docker compose --env-file .env.prod -f "${{ env.DEPLOY_COMPOSE_FILE }}" down --remove-orphans || true
@@ -117,6 +132,10 @@ jobs:
             for i in $(seq 1 20); do
               if curl --fail --silent -H "Host: ${{ env.DEPLOY_HEALTH_HOST }}" "${{ env.DEPLOY_HEALTH_URL }}" > /dev/null; then
                 echo "Health check passed on attempt ${i}"
+                DEPLOY_IMAGE_PRUNE_UNTIL="${{ env.DEPLOY_IMAGE_PRUNE_UNTIL }}" \
+                DEPLOY_BUILDER_PRUNE_UNTIL="${{ env.DEPLOY_BUILDER_PRUNE_UNTIL }}" \
+                DEPLOY_JOURNAL_VACUUM_TIME="${{ env.DEPLOY_JOURNAL_VACUUM_TIME }}" \
+                sh ./post-deploy-cleanup.sh
                 exit 0
               fi
               echo "Health check not ready on attempt ${i}, waiting..."
