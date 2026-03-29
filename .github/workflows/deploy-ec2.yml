@@ -19,7 +19,7 @@ jobs:
 
     env:
       DEPLOY_COMPOSE_FILE: docker-compose.prod.image-based.yml
-      DEPLOY_HEALTH_URL: http://127.0.0.1/health
+      DEPLOY_HEALTH_URL: http://127.0.0.1:5000/health
       DEPLOY_HEALTH_HOST: 52.77.76.22
       DEPLOY_CLEANUP_SCRIPT: post-deploy-cleanup.sh
       DEPLOY_CLEANUP_LOG: post-deploy-cleanup.log
