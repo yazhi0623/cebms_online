@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 
-import { useNavigation } from "../../shared/hooks/use-navigation";
 import { useAuth } from "../../shared/hooks/use-auth";
+import { useNavigation } from "../../shared/hooks/use-navigation";
 import { RecordEditor } from "./record-editor";
 import { RecordSidebar } from "./record-sidebar";
 import { TemplateSidebar } from "./template-sidebar";
@@ -59,7 +59,7 @@ export function RecordListPage() {
   }, [workspace.hasUnsavedChanges]);
 
   function toggleCompactPanel(nextPanel: "records" | "templates") {
-    setCompactPanel(nextPanel);
+    setCompactPanel((current) => (current === nextPanel ? null : nextPanel));
   }
 
   function handleSelectRecord(recordId: number) {
@@ -107,10 +107,10 @@ export function RecordListPage() {
   return (
     <div className="page-init-shell">
       {workspace.initialLoading ? (
-        <div className="page-init-overlay" role="status" aria-live="polite">
+        <div aria-live="polite" className="page-init-overlay" role="status">
           <div className="page-init-overlay__dialog">
-            <div className="page-init-overlay__spinner" aria-hidden="true" />
-            <strong>加载中...</strong>
+            <div aria-hidden="true" className="page-init-overlay__spinner" />
+            <strong>{"\u52a0\u8f7d\u4e2d..."}</strong>
           </div>
         </div>
       ) : null}
@@ -124,7 +124,7 @@ export function RecordListPage() {
         }
       >
         {compactLayout ? (
-          <div className="record-workspace__compact-switches" aria-label="记录页侧栏入口">
+          <div className="record-workspace__compact-switches" aria-label={"\u8bb0\u5f55\u9875\u4fa7\u680f\u5165\u53e3"}>
             <button
               aria-pressed={compactPanel === "records"}
               className={
@@ -135,7 +135,17 @@ export function RecordListPage() {
               onClick={() => toggleCompactPanel("records")}
               type="button"
             >
-              记录列表
+              <span>{"\u8bb0\u5f55\u5217\u8868"}</span>
+              <span
+                aria-hidden="true"
+                className={
+                  compactPanel === "records"
+                    ? "record-workspace__compact-switch-arrow record-workspace__compact-switch-arrow--open"
+                    : "record-workspace__compact-switch-arrow"
+                }
+              >
+                ▾
+              </span>
             </button>
             <button
               aria-pressed={compactPanel === "templates"}
@@ -147,7 +157,17 @@ export function RecordListPage() {
               onClick={() => toggleCompactPanel("templates")}
               type="button"
             >
-              模板列表
+              <span>{"\u6a21\u677f\u5217\u8868"}</span>
+              <span
+                aria-hidden="true"
+                className={
+                  compactPanel === "templates"
+                    ? "record-workspace__compact-switch-arrow record-workspace__compact-switch-arrow--open"
+                    : "record-workspace__compact-switch-arrow"
+                }
+              >
+                ▾
+              </span>
             </button>
           </div>
         ) : (
@@ -160,8 +180,8 @@ export function RecordListPage() {
             isDemoMode={workspace.isDemoMode}
             newButtonPressed={recordNewButtonPressed}
             onDeleteSelected={() => void workspace.handleDeleteSelectedRecords()}
-            onNewRecordPressStart={flashRecordNewButton}
             onNewRecord={handleNewRecord}
+            onNewRecordPressStart={flashRecordNewButton}
             onSearchDraftChange={workspace.setSearchDraft}
             onSearchSubmit={workspace.handleSearchSubmit}
             onSelectRecord={handleSelectRecord}
@@ -187,8 +207,8 @@ export function RecordListPage() {
               isDemoMode={workspace.isDemoMode}
               newButtonPressed={recordNewButtonPressed}
               onDeleteSelected={() => void workspace.handleDeleteSelectedRecords()}
-              onNewRecordPressStart={flashRecordNewButton}
               onNewRecord={handleNewRecord}
+              onNewRecordPressStart={flashRecordNewButton}
               onSearchDraftChange={workspace.setSearchDraft}
               onSearchSubmit={workspace.handleSearchSubmit}
               onSelectRecord={handleSelectRecord}
@@ -215,6 +235,18 @@ export function RecordListPage() {
             footerStatusText={workspace.footerStatusText}
             importNotice={workspace.importNotice}
             isDemoMode={workspace.isDemoMode}
+            onCancelDefaultTemplate={() => void workspace.handleCancelDefaultTemplate()}
+            onContentDraftChange={workspace.setContentDraft}
+            onDeleteRecord={() => void workspace.handleDeleteRecord()}
+            onDeleteTemplate={() => void workspace.handleDeleteTemplate()}
+            onImportTemplate={workspace.handleImportTemplateIntoEditor}
+            onSaveRecord={() => void workspace.handleSaveRecord()}
+            onSaveTemplate={() => void workspace.handleSaveTemplate()}
+            onSaveTemplateAsDefault={() => void workspace.handleSaveTemplateAsDefault()}
+            onTemplateContentDraftChange={workspace.setTemplateContentDraft}
+            onTemplateTitleDraftChange={workspace.setTemplateTitleDraft}
+            onTitleDraftChange={workspace.setTitleDraft}
+            onToggleTemplateMenu={() => workspace.setTemplateMenuOpen(!workspace.templateMenuOpen)}
             pageNotice={workspace.pageNotice}
             savingRecord={workspace.savingRecord}
             savingTemplate={workspace.savingTemplate}
@@ -231,18 +263,6 @@ export function RecordListPage() {
             templates={workspace.templates}
             titleDraft={workspace.titleDraft}
             titleFocusSignal={workspace.titleFocusSignal}
-            onContentDraftChange={workspace.setContentDraft}
-            onDeleteRecord={() => void workspace.handleDeleteRecord()}
-            onDeleteTemplate={() => void workspace.handleDeleteTemplate()}
-            onImportTemplate={workspace.handleImportTemplateIntoEditor}
-            onCancelDefaultTemplate={() => void workspace.handleCancelDefaultTemplate()}
-            onSaveRecord={() => void workspace.handleSaveRecord()}
-            onSaveTemplate={() => void workspace.handleSaveTemplate()}
-            onSaveTemplateAsDefault={() => void workspace.handleSaveTemplateAsDefault()}
-            onTemplateContentDraftChange={workspace.setTemplateContentDraft}
-            onTemplateTitleDraftChange={workspace.setTemplateTitleDraft}
-            onTitleDraftChange={workspace.setTitleDraft}
-            onToggleTemplateMenu={() => workspace.setTemplateMenuOpen(!workspace.templateMenuOpen)}
           />
         ) : null}
 
@@ -252,15 +272,15 @@ export function RecordListPage() {
               currentUserName={currentUser?.username}
               isCollapsed={false}
               newButtonPressed={templateNewButtonPressed}
-              onNewTemplatePressStart={flashTemplateNewButton}
               onNewTemplate={handleNewTemplate}
+              onNewTemplatePressStart={flashTemplateNewButton}
               onSelectTemplate={handleSelectTemplate}
-            onToggleCollapsed={() => setCompactPanel(null)}
-            selectedTemplateId={workspace.selectedTemplateId}
-            templateError={workspace.templateSidebarError}
-            templates={workspace.templates}
-            templatesLoading={workspace.templatesLoading}
-          />
+              onToggleCollapsed={() => setCompactPanel(null)}
+              selectedTemplateId={workspace.selectedTemplateId}
+              templateError={workspace.templateSidebarError}
+              templates={workspace.templates}
+              templatesLoading={workspace.templatesLoading}
+            />
           </div>
         ) : null}
 
@@ -269,8 +289,8 @@ export function RecordListPage() {
             currentUserName={currentUser?.username}
             isCollapsed={templateSidebarCollapsed}
             newButtonPressed={templateNewButtonPressed}
-            onNewTemplatePressStart={flashTemplateNewButton}
             onNewTemplate={handleNewTemplate}
+            onNewTemplatePressStart={flashTemplateNewButton}
             onSelectTemplate={handleSelectTemplate}
             onToggleCollapsed={() => setTemplateSidebarCollapsed((current) => !current)}
             selectedTemplateId={workspace.selectedTemplateId}

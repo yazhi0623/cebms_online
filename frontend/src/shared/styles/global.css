@@ -1408,7 +1408,7 @@ textarea {
   overflow-x: hidden;
   border-radius: 20px;
   border-color: #8e7a68;
-  background: #fffaf4;
+  background: rgba(255, 255, 255, 0.92);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.65);
 }
 
@@ -1640,15 +1640,15 @@ textarea {
   top: 50%;
   right: 0;
   transform: translateY(-50%);
-  width: 14px;
+  width: 24px;
   height: 72px;
   border: none;
-  border-radius: 10px 0 0 10px;
+  border-radius: 0;
   display: grid;
   place-items: center;
-  background: linear-gradient(180deg, #c9b29a 0%, #b99a7d 100%);
+  background: transparent;
   color: #fff;
-  font-size: 20px;
+  font-size: 28px;
   font-weight: 700;
   line-height: 1;
   cursor: pointer;
@@ -1660,7 +1660,8 @@ textarea {
 
 .template-sidebar-shell__toggle:hover,
 .template-sidebar-shell__toggle:focus-visible {
-  background: linear-gradient(180deg, #bfa388 0%, #aa8869 100%);
+  background: transparent;
+  color: #fff;
   outline: none;
 }
 
@@ -2827,9 +2828,16 @@ textarea {
   }
 
   .record-workspace__compact-switches .shell__nav-button {
-    min-height: 42px;
+    min-height: 48px;
     transition: none;
     -webkit-tap-highlight-color: transparent;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 10px 12px 10px 16px;
+    font-weight: 700;
+    position: relative;
   }
 
   .record-workspace__compact-switches .shell__nav-button--pressable:not(:disabled):active,
@@ -2869,6 +2877,25 @@ textarea {
     justify-self: stretch;
   }
 
+  .record-workspace__compact-switch-arrow {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    position: absolute;
+    right: 12px;
+    width: auto;
+    height: auto;
+    font-size: 22px;
+    font-weight: 700;
+    line-height: 1;
+    color: #1f1a17;
+    transition: transform 160ms ease;
+  }
+
+  .record-workspace__compact-switch-arrow--open {
+    transform: rotate(180deg);
+  }
+
   .record-workspace--compact .record-editor-shell {
     grid-column: auto;
     grid-row: 2 / 4;
@@ -2883,7 +2910,20 @@ textarea {
 
   .record-workspace--compact .editor-title-row {
     width: 100%;
-    grid-template-columns: 52px minmax(0, 1fr);
+    grid-template-columns: 52px minmax(0, 1fr) 52px;
+  }
+
+  .record-workspace--compact .editor-title-row span {
+    grid-column: 1;
+  }
+
+  .record-workspace--compact .editor-title-row input {
+    grid-column: 2;
+  }
+
+  .record-workspace--compact .editor-title-row::after {
+    content: "";
+    grid-column: 3;
   }
 
   .record-workspace--compact .editor-form__field--legacy-content {
