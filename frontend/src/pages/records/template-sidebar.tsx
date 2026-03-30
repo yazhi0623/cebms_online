@@ -33,18 +33,18 @@ export function TemplateSidebar({
       <button
         aria-controls="template-sidebar-panel"
         aria-expanded={!isCollapsed}
-        aria-label={isCollapsed ? "展开模板列表" : "收起模板列表"}
+        aria-label={isCollapsed ? "\u5c55\u5f00\u6a21\u677f\u5217\u8868" : "\u6536\u8d77\u6a21\u677f\u5217\u8868"}
         className="template-sidebar-shell__toggle"
         onClick={onToggleCollapsed}
         type="button"
       >
-        {/* 侧边栏始终挂载，只切换折叠态，避免模板列表状态被重置。 */}
-        {isCollapsed ? "‹" : "›"}
+        {" "}
+        {isCollapsed ? "\u2304" : "\u2303"}
       </button>
       <div className="template-sidebar-shell__inner" id="template-sidebar-panel">
         <div className="record-sidebar__header">
           <div>
-            <h2 className="record-sidebar__title">模板列表</h2>
+            <h2 className="record-sidebar__title">{"\u6a21\u677f\u5217\u8868"}</h2>
           </div>
           <div className="sidebar-header-actions">
             <button
@@ -58,20 +58,20 @@ export function TemplateSidebar({
               onPointerDown={onNewTemplatePressStart}
               type="button"
             >
-              新增
+              {"\u65b0\u589e"}
             </button>
           </div>
         </div>
 
         {templateError ? <p className="auth-form__error">{templateError}</p> : null}
         {!templateError && !templates.length && !templatesLoading ? (
-          <p className="panel__hint">{currentUserName ? "当前没有模板" : "Demo 模式暂时没有示例模板"}</p>
+          <p className="panel__hint">{currentUserName ? "\u5f53\u524d\u6ca1\u6709\u6a21\u677f" : "Demo \u6a21\u5f0f\u6682\u65f6\u6ca1\u6709\u793a\u4f8b\u6a21\u677f"}</p>
         ) : null}
 
         <ul className="template-sidebar-shell__list" role="list">
           {templates.map((template) => {
             const active = template.id === selectedTemplateId;
-            const title = template.isDefault ? `${template.title}（默认）` : template.title;
+            const title = template.isDefault ? `${template.title}\uff08\u9ed8\u8ba4\uff09` : template.title;
 
             return (
               <li key={template.id}>
@@ -88,7 +88,7 @@ export function TemplateSidebar({
           })}
         </ul>
         <div className="record-sidebar__footer">
-          <span className="record-sidebar__count">{templatesLoading ? "加载中" : `${templates.length} 条`}</span>
+          <span className="record-sidebar__count">{templatesLoading ? "\u52a0\u8f7d\u4e2d" : `${templates.length} \u6761`}</span>
         </div>
       </div>
     </aside>
