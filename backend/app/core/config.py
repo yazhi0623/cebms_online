@@ -18,7 +18,7 @@ class Settings(BaseSettings):
     POSTGRES_USER: str = "cebms_user"
     POSTGRES_PASSWORD: str = "cebms_pw"
 
-    JWT_SECRET_KEY: str = "change-me"
+    JWT_SECRET_KEY: str = "53db5a7068ee3b0ad97ca14f864a430ea100e6de9bd6a9c691a201bd83e9b2cdd94f1dde710378cf103adae88282b94ff8570eeec79b33aae38a2fec05515328"
     JWT_ALGORITHM: str = "HS256"
     JWT_ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
     AUTH_REGISTRATION_ENABLED: bool = False
