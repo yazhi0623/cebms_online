@@ -364,17 +364,11 @@ export function useRecordWorkspace() {
   function handleImportTemplateIntoEditor(template: TemplateItem) {
     // 导入模板并不请求后端，只是把已加载的模板内容写进编辑器草稿。
     setEditorMode("record");
-    const isCreatingRecord = editorMode === "record" && selectedRecord === null;
-    const nextContent = isCreatingRecord
-      ? [contentDraft.trimEnd(), template.content.trim()].filter(Boolean).join("\n\n")
-      : template.content;
 
     setEditorMode("record");
     setSelectedRecordId(null);
-    if (!isCreatingRecord) {
-      setTitleDraft("");
-    }
-    setContentDraft(nextContent);
+    setTitleDraft("");
+    setContentDraft(template.content);
     setRecordTemplateId(template.id);
     setEditorError(null);
     setTemplateTriggerLabel(template.isDefault ? `${template.title}（默认）` : template.title);
@@ -503,10 +497,20 @@ export function useRecordWorkspace() {
   }
 
   async function handleNewRecord() {
+    if (isDemoMode || !session?.accessToken) {
+      showLoginRequiredNotice();
+      return false;
+    }
+
     return runPendingAction({ type: "create-record" });
   }
 
   async function handleNewTemplate() {
+    if (isDemoMode || !session?.accessToken) {
+      showLoginRequiredNotice();
+      return false;
+    }
+
     return runPendingAction({ type: "create-template" });
   }
 

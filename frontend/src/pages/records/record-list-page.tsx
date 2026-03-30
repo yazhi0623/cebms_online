@@ -143,9 +143,7 @@ export function RecordListPage() {
                     ? "record-workspace__compact-switch-arrow record-workspace__compact-switch-arrow--open"
                     : "record-workspace__compact-switch-arrow"
                 }
-              >
-                ▾
-              </span>
+              />
             </button>
             <button
               aria-pressed={compactPanel === "templates"}
@@ -165,9 +163,7 @@ export function RecordListPage() {
                     ? "record-workspace__compact-switch-arrow record-workspace__compact-switch-arrow--open"
                     : "record-workspace__compact-switch-arrow"
                 }
-              >
-                ▾
-              </span>
+              />
             </button>
           </div>
         ) : (

@@ -1,7 +1,7 @@
 import type { MutableRefObject } from "react";
 
 import type { RecordItem } from "../../entities/record/types";
-import { formatDate } from "./record-workspace-utils";
+import { formatCreatedUpdatedTime } from "./record-workspace-utils";
 
 type RecordSidebarProps = {
   allVisibleSelected: boolean;
@@ -137,7 +137,7 @@ export function RecordSidebar({
                 type="button"
               >
                 <span className="record-list-card__title">{record.title || "未命名记录"}</span>
-                <small className="record-list-card__time">{formatDate(record.updatedAt)}</small>
+                <small className="record-list-card__time">{formatCreatedUpdatedTime(record.createdAt, record.updatedAt)}</small>
               </button>
             </li>
           );

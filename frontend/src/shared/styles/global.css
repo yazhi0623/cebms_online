@@ -1640,15 +1640,15 @@ textarea {
   top: 50%;
   right: 0;
   transform: translateY(-50%);
-  width: 24px;
+  width: 14px;
   height: 72px;
   border: none;
-  border-radius: 0;
+  border-radius: 10px 0 0 10px;
   display: grid;
   place-items: center;
-  background: transparent;
+  background: linear-gradient(180deg, #c9b29a 0%, #b99a7d 100%);
   color: #fff;
-  font-size: 28px;
+  font-size: 20px;
   font-weight: 700;
   line-height: 1;
   cursor: pointer;
@@ -1660,8 +1660,7 @@ textarea {
 
 .template-sidebar-shell__toggle:hover,
 .template-sidebar-shell__toggle:focus-visible {
-  background: transparent;
-  color: #fff;
+  background: linear-gradient(180deg, #bfa388 0%, #aa8869 100%);
   outline: none;
 }
 
@@ -2878,22 +2877,19 @@ textarea {
   }
 
   .record-workspace__compact-switch-arrow {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
+    display: inline-block;
     position: absolute;
-    right: 12px;
-    width: auto;
-    height: auto;
-    font-size: 22px;
-    font-weight: 700;
-    line-height: 1;
-    color: #1f1a17;
-    transition: transform 160ms ease;
+    right: 16px;
+    width: 10px;
+    height: 10px;
+    border-right: 2px solid #1f1a17;
+    border-bottom: 2px solid #1f1a17;
+    transform: translateY(-2px) rotate(45deg);
+    transition: transform 0.18s ease;
   }
 
   .record-workspace__compact-switch-arrow--open {
-    transform: rotate(180deg);
+    transform: translateY(2px) rotate(-135deg);
   }
 
   .record-workspace--compact .record-editor-shell {

@@ -1,5 +1,5 @@
 import type { TemplateItem } from "../../entities/template/types";
-import { formatDate } from "./record-workspace-utils";
+import { formatCreatedUpdatedTime } from "./record-workspace-utils";
 
 type TemplateSidebarProps = {
   currentUserName?: string;
@@ -38,8 +38,7 @@ export function TemplateSidebar({
         onClick={onToggleCollapsed}
         type="button"
       >
-        {" "}
-        {isCollapsed ? "\u2304" : "\u2303"}
+        {isCollapsed ? "‹" : "›"}
       </button>
       <div className="template-sidebar-shell__inner" id="template-sidebar-panel">
         <div className="record-sidebar__header">
@@ -81,7 +80,7 @@ export function TemplateSidebar({
                   type="button"
                 >
                   <span className="template-list-card__title">{title}</span>
-                  <small className="template-list-card__time">{formatDate(template.updatedAt)}</small>
+                  <small className="template-list-card__time">{formatCreatedUpdatedTime(template.createdAt, template.updatedAt)}</small>
                 </button>
               </li>
             );

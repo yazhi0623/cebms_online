@@ -18,7 +18,7 @@ class Settings(BaseSettings):
     POSTGRES_USER: str = "cebms_user"
     POSTGRES_PASSWORD: str = "cebms_pw"
 
-    JWT_SECRET_KEY: str = "change-me"
+    JWT_SECRET_KEY: str = "53db5a7068ee3b0ad97ca14f864a430ea100e6de9bd6a9c691a201bd83e9b2cdd94f1dde710378cf103adae88282b94ff8570eeec79b33aae38a2fec05515328"
     JWT_ALGORITHM: str = "HS256"
     JWT_ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
     AUTH_REGISTRATION_ENABLED: bool = False
@@ -27,10 +27,16 @@ class Settings(BaseSettings):
     AUTH_LOGIN_RATE_LIMIT_WINDOW_SECONDS: int = 300
     TOAST_DURATION_MS: int = 2400
     DAILY_ANALYSIS_LIMIT: int = 20
+    DAILY_ANALYSIS_LIMIT_WHEN_LLM_DISABLED: int = 5
     ANALYSIS_THRESHOLD: int = 10
     ANALYSIS_LLM_ENABLED: bool = True
     ANALYSIS_MAX_LLM_OUTPUT_CHARS: int = 300
     ANALYSIS_MODELS_PATH: str = str(Path(__file__).resolve().parents[2] / "config" / "models.json")
+    ANALYSIS_WEATHER_ENABLED: bool = False
+    ANALYSIS_WEATHER_LOCATION_LABEL: str = ""
+    ANALYSIS_WEATHER_LATITUDE: float | None = None
+    ANALYSIS_WEATHER_LONGITUDE: float | None = None
+    ANALYSIS_WEATHER_TIMEOUT_SECONDS: int = 5
     QWEN_API_KEY: str = ""
     QWEN_BASE_URL: str = "https://dashscope.aliyuncs.com/compatible-mode/v1"
     DEEPSEEK_API_KEY: str = ""

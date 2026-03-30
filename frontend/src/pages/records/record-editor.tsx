@@ -179,7 +179,7 @@ export function RecordEditor({
                 aria-expanded={templateMenuOpen}
                 aria-haspopup="listbox"
                 className="template-select-trigger"
-                disabled={isDemoMode || templates.length === 0}
+                disabled={templates.length === 0}
                 onClick={onToggleTemplateMenu}
                 ref={templateTriggerRef}
                 style={{ width: `${templateSelectWidth}px` }}
