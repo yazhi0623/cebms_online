@@ -24,10 +24,10 @@ import { useAuth } from "../../shared/hooks/use-auth";
 import { useConfirm } from "../../shared/hooks/use-confirm";
 
 const analysisRangeOptions = [
-  { value: "1m", label: "前一个月", months: 1 },
-  { value: "3m", label: "前三个月", months: 3 },
-  { value: "6m", label: "前六个月", months: 6 },
-  { value: "1y", label: "前一年", months: 12 },
+  { value: "1m", label: "近一个月", months: 1 },
+  { value: "3m", label: "近三个月", months: 3 },
+  { value: "6m", label: "近六个月", months: 6 },
+  { value: "1y", label: "近一年", months: 12 },
   { value: "all", label: "全部", months: 0 },
 ] as const;
 
