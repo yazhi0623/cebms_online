@@ -44,7 +44,7 @@ type AnalysisBlock =
   | { type: "paragraph"; content: string }
   | { type: "heading"; heading: string; lines?: string[] };
 
-const AI_SUPPLEMENT_HEADING = "AI补充分析：";
+const AI_SUPPLEMENT_HEADING = "AI分析：";
 const NEXT_STEP_HEADING = "下一步建议：";
 const ANALYSIS_SAMPLE_NOTICE = "AI分析功能暂时关闭，目前生成样本数据";
 
@@ -110,7 +110,7 @@ function splitSuggestionLines(content: string): string[] {
 function extractHeadingBlock(paragraph: string): { heading: string; trailingContent: string } | null {
   const normalized = paragraph.trim();
   const headingPatterns = [
-    { heading: AI_SUPPLEMENT_HEADING, pattern: /^\*{0,2}AI补充分析\*{0,2}[:：]?\s*/ },
+    { heading: AI_SUPPLEMENT_HEADING, pattern: /^\*{0,2}AI分析\*{0,2}[:：]?\s*/ },
     { heading: NEXT_STEP_HEADING, pattern: /^\*{0,2}下一步建议\*{0,2}[:：]?\s*/ },
   ] as const;
 
