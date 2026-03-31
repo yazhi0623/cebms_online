@@ -1380,6 +1380,7 @@ textarea {
   border-radius: 16px;
   padding: 12px 14px;
   background: rgba(255, 255, 255, 0.82);
+  background-clip: padding-box;
   color: #3f3026;
 }
 
@@ -1400,6 +1401,7 @@ textarea {
 }
 
 .editor-form__field--legacy-content textarea {
+  display: block;
   min-height: 0;
   height: 100%;
   max-height: 100%;
@@ -1409,6 +1411,10 @@ textarea {
   border-radius: 20px;
   border-color: #8e7a68;
   background: rgba(255, 255, 255, 0.92);
+  background-clip: padding-box;
+  appearance: none;
+  -webkit-appearance: none;
+  -webkit-tap-highlight-color: transparent;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.65);
 }
 
@@ -2882,8 +2888,8 @@ textarea {
     right: 16px;
     width: 10px;
     height: 10px;
-    border-right: 2px solid #1f1a17;
-    border-bottom: 2px solid #1f1a17;
+    border-right: 2px solid currentColor;
+    border-bottom: 2px solid currentColor;
     transform: translateY(-2px) rotate(45deg);
     transition: transform 0.18s ease;
   }
