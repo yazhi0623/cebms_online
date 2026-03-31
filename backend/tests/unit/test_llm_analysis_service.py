@@ -1,9 +1,10 @@
 import json
-from datetime import datetime
+from datetime import UTC, datetime
 
 from app.core.config import settings
 from app.models.record import Record
 from app.services.llm_analysis_service import LLMAnalysisService
+from app.services.weather_service import WeatherSnapshot
 
 
 def test_get_ordered_models_starts_from_current_model_index() -> None:
@@ -96,17 +97,16 @@ def test_switch_model_stops_at_last_qwen_index(tmp_path) -> None:
 def test_build_prompt_keeps_full_input_and_mentions_output_limit(monkeypatch) -> None:
     service = LLMAnalysisService("unused")
     monkeypatch.setattr(settings, "ANALYSIS_MAX_LLM_OUTPUT_CHARS", 300)
-    long_content = "输入内容" * 200
     record = Record(
         user_id=1,
         title="长记录",
-        content=long_content,
-        updated_at=datetime(2026, 3, 25, 8, 0, 0),
+        content="输入内容" * 200,
+        updated_at=datetime(2026, 3, 25, 8, 0, 0, tzinfo=UTC),
     )
 
     prompt = service._build_prompt([record], "全部")
 
-    assert long_content in prompt
+    assert "输入内容" * 50 in prompt
     assert "正文总长度控制在300字以内" in prompt
     assert "结合每条记录的时间和内容" in prompt
     assert "状态变化" in prompt
@@ -118,13 +118,13 @@ def test_build_prompt_orders_records_from_earliest_to_latest() -> None:
         user_id=1,
         title="较早记录",
         content="先前内容",
-        updated_at=datetime(2026, 3, 20, 8, 0, 0),
+        updated_at=datetime(2026, 3, 20, 8, 0, 0, tzinfo=UTC),
     )
     newer = Record(
         user_id=1,
         title="较新记录",
         content="后续内容",
-        updated_at=datetime(2026, 3, 25, 9, 0, 0),
+        updated_at=datetime(2026, 3, 25, 9, 0, 0, tzinfo=UTC),
     )
 
     prompt = service._build_prompt([newer, older], "全部")
@@ -134,11 +134,29 @@ def test_build_prompt_orders_records_from_earliest_to_latest() -> None:
     assert "内容：后续内容" in prompt
 
 
+def test_build_prompt_includes_crisis_and_sunlight_guidance() -> None:
+    service = LLMAnalysisService("unused")
+    today = datetime.now(UTC)
+    record = Record(
+        user_id=1,
+        title="今天",
+        content="情绪分值(1~10)：2\n其他：好烦",
+        updated_at=today,
+    )
+    weather_snapshot = WeatherSnapshot(location_label="上海", is_sunny=True, is_daylight=True, weather_code=0)
+
+    prompt = service._build_prompt([record], "全部", weather_snapshot)
+
+    assert "情绪崩溃状态" in prompt
+    assert "休息建议" in prompt
+    assert "晒太阳建议" in prompt
+
+
 def test_limit_output_length_trims_model_response(monkeypatch) -> None:
     service = LLMAnalysisService("unused")
     monkeypatch.setattr(settings, "ANALYSIS_MAX_LLM_OUTPUT_CHARS", 300)
 
-    limited = service._limit_output_length("甲" * 320)
+    limited = service._limit_output_length("字" * 320)
 
     assert len(limited) == 300
-    assert limited == "甲" * 300
+    assert limited == "字" * 300

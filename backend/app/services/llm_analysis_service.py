@@ -7,22 +7,25 @@ from typing import Any
 
 from app.core.config import settings
 from app.models.record import Record
+from app.services.analysis_summary_service import AnalysisSummaryService
+from app.services.weather_service import WeatherService
 from scripts.qwen_model_switcher import change_model
 
 try:
     from openai import APIError, OpenAI
-except ImportError:  # pragma: no cover - optional dependency during local test runs
+except ImportError:  # pragma: no cover
     APIError = Exception
     OpenAI = None
 
 
 class LLMAnalysisService:
-    """使用配置好的远端模型服务生成分析文本。"""
+    """Generate analysis text with remote LLMs when enabled."""
+
     def __init__(self, models_path: str | None = None) -> None:
         self.models_path = Path(models_path or settings.ANALYSIS_MODELS_PATH)
+        self.weather_service = WeatherService()
 
     def generate_analysis_text(self, records: list[Record], range_label: str) -> str | None:
-        """让当前激活的大模型直接分析原始记录。"""
         if not settings.ANALYSIS_LLM_ENABLED:
             return None
 
@@ -31,11 +34,11 @@ class LLMAnalysisService:
         if not models:
             return None
 
-        prompt = self._build_prompt(records, range_label)
+        weather_snapshot = self.weather_service.get_current_snapshot()
+        prompt = self._build_prompt(records, range_label, weather_snapshot)
         return self._run_prompt(prompt, payload)
 
     def generate_summary_text(self, analysis_texts: list[str], range_label: str) -> str | None:
-        """让当前激活的大模型汇总分块分析结果。"""
         if not settings.ANALYSIS_LLM_ENABLED:
             return None
 
@@ -48,7 +51,6 @@ class LLMAnalysisService:
         return self._run_prompt(prompt, payload)
 
     def _run_prompt(self, prompt: str, payload: dict[str, Any]) -> str | None:
-        """按顺序尝试模型，直到成功或模型列表耗尽。"""
         models = self._get_ordered_models(payload)
         if not models:
             return None
@@ -67,7 +69,6 @@ class LLMAnalysisService:
         return None
 
     def _call_model(self, model_name: str, prompt: str) -> dict[str, Any]:
-        """执行一次模型调用，并把结果整理成统一结构。"""
         client = self._build_client(model_name)
         if client is None:
             return {"ok": False, "status_code": None, "content": None}
@@ -78,8 +79,11 @@ class LLMAnalysisService:
                 messages=[
                     {
                         "role": "system",
-                        "content": "你是专业、克制的中文心理记录分析助手。只基于提供的记录做总结，不虚构事实，不做诊断, 输出内容要温暖人心，"
-                                   "禁止输出伤害用户或者伤害他人的内容，禁止输出挑唆违法犯罪的内容。",
+                        "content": (
+                            "你是专业、克制、温和的中文心理记录分析助手。"
+                            "只基于提供的记录做总结，不虚构事实，不做诊断。"
+                            "输出内容要温和、具体、可执行，禁止输出伤害用户或他人的内容。"
+                        ),
                     },
                     {"role": "user", "content": prompt},
                 ],
@@ -112,7 +116,6 @@ class LLMAnalysisService:
     def _load_models_payload(self) -> dict[str, Any]:
         if not self.models_path.exists():
             return {}
-
         return json.loads(self.models_path.read_text(encoding="utf-8"))
 
     def _get_ordered_models(self, payload: dict[str, Any]) -> list[dict[str, Any]]:
@@ -143,35 +146,42 @@ class LLMAnalysisService:
         return isinstance(status_code, int) and 400 <= status_code < 500
 
     @staticmethod
-    def _build_prompt(records: list[Record], range_label: str) -> str:
-        latest = sorted(records, key=lambda item: item.updated_at)
+    def _build_prompt(records: list[Record], range_label: str, weather_snapshot=None) -> str:
+        ordered = sorted(records, key=lambda item: item.created_at)
         record_blocks = []
-        for index, record in enumerate(latest, start=1):
+        for index, record in enumerate(ordered, start=1):
             record_blocks.append(
-                "\n".join([
-                    f"记录{index}",
-                    f"时间：{record.updated_at.strftime('%Y-%m-%d %H:%M:%S')}",
-                    f"标题：{record.title or '未命名'}",
-                    f"内容：{record.content or ''}",
-                ])
+                "\n".join(
+                    [
+                        f"记录{index}",
+                        f"时间：{record.created_at.strftime('%Y-%m-%d %H:%M:%S')}",
+                        f"标题：{record.title or '未命名'}",
+                        f"内容：{record.content or ''}",
+                    ]
+                )
             )
 
-        return "\n\n".join([
-            f"分析范围：{range_label}",
-            f"记录数量：{len(latest)}",
-            "请基于下面这些认知-情绪-行为记录，输出一份中文分析结果。",
-            "记录数据已经按时间从早到晚排列，请结合每条记录的时间和内容，分析用户状态随着时间流逝的变化。",
-            "输出要求：",
-            "1. 第一行必须是【分析范围】加时间范围。",
-            "2. 后续按以下标题输出：总体趋势、状态变化、主要触发因素、重复出现的问题模式、已出现的有效应对、下一步建议。",
-            f"3. 第一行之后的正文总长度控制在{settings.ANALYSIS_MAX_LLM_OUTPUT_CHARS}字以内。",
-            "4. 不要输出 markdown 列表符号，不要编造记录里没有的信息。",
-            "5. 下一步建议要简单易上手并且实用能够解决现在的问题。",
-            "6. 不要输出 markdown 格式文案。",
-            "",
-            "记录数据：",
-            "\n\n".join(record_blocks),
-        ])
+        emotion_context = AnalysisSummaryService.build_emotional_context_text(ordered, weather_snapshot)
+
+        return "\n\n".join(
+            [
+                f"分析范围：{range_label}",
+                f"记录数量：{len(ordered)}",
+                "请基于下面这些认知-情绪-行为记录，输出一份中文分析结果。",
+                "记录数据已经按时间从早到晚排列，请结合每条记录的时间和内容，分析用户状态随着时间流逝的变化。",
+                emotion_context,
+                "输出要求：",
+                "1. 第一行必须是【分析范围】加时间范围。",
+                "2. 后续按以下标题输出：总体趋势、状态变化、主要触发因素、重复出现的问题模式、已出现的有效应对、下一步建议。",
+                f"3. 第一行之后的正文总长度控制在{settings.ANALYSIS_MAX_LLM_OUTPUT_CHARS}字以内。",
+                "4. 不要输出 markdown 列表符号，不要编造记录里没有的信息。",
+                "5. 下一步建议要简单易上手并且实用能够解决现在的问题。",
+                "6. 不要输出 markdown 格式文档。",
+                "",
+                "记录数据：",
+                "\n\n".join(record_blocks),
+            ]
+        )
 
     @staticmethod
     def _build_summary_prompt(analysis_texts: list[str], range_label: str) -> str:
@@ -179,23 +189,25 @@ class LLMAnalysisService:
         for index, analysis_text in enumerate(analysis_texts, start=1):
             blocks.append("\n".join([f"分组分析{index}", analysis_text.strip()]))
 
-        return "\n\n".join([
-            f"分析范围：{range_label}",
-            f"分组数量：{len(analysis_texts)}",
-            "请基于下面这些分组分析结果，输出一份最终汇总分析。",
-            "请重点归纳用户状态随着时间推进出现了哪些变化，以及这些变化可能和哪些触发因素相关。",
-            "输出要求：",
-            "1. 第一行必须是【分析范围】加时间范围，并在末尾加（汇总）。",
-            "2. 后续按以下标题输出：总体趋势、状态变化、主要触发因素、重复出现的问题模式、已出现的有效应对、下一步建议。",
-            f"3. 第一行之后的正文总长度控制在{settings.ANALYSIS_MAX_LLM_OUTPUT_CHARS}字以内。",
-            "4. 不要重复逐组罗列，重点做跨分组归纳。",
-            "5. 不要输出 markdown 列表符号，不要编造记录里没有的信息。",
-            "6. 下一步建议要简单易上手并且实用能够解决现在的问题。",
-            "7. 不要输出 markdown 格式文案。",
-            "",
-            "分组分析数据：",
-            "\n\n".join(blocks),
-        ])
+        return "\n\n".join(
+            [
+                f"分析范围：{range_label}",
+                f"分组数量：{len(analysis_texts)}",
+                "请基于下面这些分组分析结果，输出一份最终汇总分析。",
+                "请重点归纳用户状态随着时间推进出现了哪些变化，以及这些变化可能和哪些触发因素相关。",
+                "输出要求：",
+                "1. 第一行必须是【分析范围】加时间范围，并在末尾加（汇总）。",
+                "2. 后续按以下标题输出：总体趋势、状态变化、主要触发因素、重复出现的问题模式、已出现的有效应对、下一步建议。",
+                f"3. 第一行之后的正文总长度控制在{settings.ANALYSIS_MAX_LLM_OUTPUT_CHARS}字以内。",
+                "4. 不要重复逐组罗列，重点做跨分组归纳。",
+                "5. 不要输出 markdown 列表符号，不要编造记录里没有的信息。",
+                "6. 下一步建议要简单易上手并且实用能够解决现在的问题。",
+                "7. 不要输出 markdown 格式文档。",
+                "",
+                "分组分析数据：",
+                "\n\n".join(blocks),
+            ]
+        )
 
     @staticmethod
     def _limit_output_length(content: str) -> str:

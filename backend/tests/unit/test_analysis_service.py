@@ -1,4 +1,4 @@
-﻿from datetime import UTC, date, datetime
+from datetime import UTC, date, datetime, timedelta
 from types import SimpleNamespace
 
 import pytest
@@ -7,6 +7,8 @@ from fastapi import HTTPException
 from app.core.config import settings
 from app.schemas.analysis import AnalysisCreate, AnalysisGenerateRequest
 from app.services.analysis_service import AnalysisService
+from app.services.analysis_summary_service import AnalysisSummaryService
+from app.services.weather_service import WeatherSnapshot
 
 
 class StubLLMAnalysisService:
@@ -35,11 +37,7 @@ class StubAnalysisRepository:
         self.record_by_id = {}
 
     def list_by_user(self, user_id: int):
-        return [
-            item
-            for item in self.analyses
-            if item.user_id == user_id and item.content != self.DELETED_ANALYSIS_CONTENT
-        ]
+        return [item for item in self.analyses if item.user_id == user_id and item.content != self.DELETED_ANALYSIS_CONTENT]
 
     def count_all_by_user(self, user_id: int):
         return len([item for item in self.analyses if item.user_id == user_id])
@@ -53,19 +51,7 @@ class StubAnalysisRepository:
                 return item
         return None
 
-    def create(
-        self,
-        user_id: int,
-        record_id: int | None,
-        template_id: int | None,
-        analysis_type: str,
-        content: str,
-        day_key: date,
-        created_at=None,
-        source_analysis_id=None,
-    ):
-        if isinstance(content, tuple):
-            raise AssertionError("unexpected tuple content")
+    def create(self, user_id, record_id, template_id, analysis_type, content, day_key, created_at=None, source_analysis_id=None):
         analysis = SimpleNamespace(
             id=len(self.analyses) + 1,
             user_id=user_id,
@@ -108,13 +94,7 @@ class StubTemplateRepository:
         return None
 
 
-def make_record(
-    record_id: int,
-    user_id: int,
-    content: str,
-    current_time: datetime | None = None,
-    template_id: int | None = None,
-):
+def make_record(record_id: int, user_id: int, content: str, current_time: datetime | None = None, template_id: int | None = None):
     current_time = current_time or datetime.now(UTC)
     return SimpleNamespace(
         id=record_id,
@@ -138,10 +118,10 @@ def test_aggregate_analyses_returns_empty_state() -> None:
 
     assert result == {
         "count": 0,
-        "content": "\u6682\u65e0\u5df2\u4fdd\u5b58\u7684AI\u5206\u6790\u7ed3\u679c",
+        "content": "暂无已保存的AI分析结果",
         "total_count": 0,
         "latest_day": None,
-        "combined_content": "\u6682\u65e0\u5df2\u4fdd\u5b58\u7684AI\u5206\u6790\u7ed3\u679c",
+        "combined_content": "暂无已保存的AI分析结果",
     }
 
 
@@ -160,10 +140,7 @@ def test_generate_analysis_rejects_when_threshold_not_met(monkeypatch) -> None:
 
 def test_generate_analysis_uses_llm_result_when_available(monkeypatch) -> None:
     repository = StubAnalysisRepository()
-    repository.records = [
-        make_record(1, 1, "x"),
-        make_record(2, 1, "y"),
-    ]
+    repository.records = [make_record(1, 1, "x"), make_record(2, 1, "y")]
     llm_service = StubLLMAnalysisService("【分析范围】全部\n总体趋势：稳定")
     service = AnalysisService(repository, StubTemplateRepository(), llm_service)
     monkeypatch.setattr(settings, "ANALYSIS_THRESHOLD", 2)
@@ -188,11 +165,7 @@ def test_generate_analysis_batches_large_datasets_and_returns_final_summary(monk
     result = service.generate_analysis(1, AnalysisGenerateRequest(record_id=None, range_months=0))
 
     assert len(repository.analyses) == 4
-    assert [analysis.analysis_type for analysis in repository.analyses[:-1]] == [
-        "batch_chunk",
-        "batch_chunk",
-        "batch_chunk",
-    ]
+    assert [analysis.analysis_type for analysis in repository.analyses[:-1]] == ["batch_chunk", "batch_chunk", "batch_chunk"]
     assert repository.analyses[-1].analysis_type == "batch_summary"
     assert "【分析范围】全部（汇总）" in result.content
     assert len(llm_service.calls) == 3
@@ -202,15 +175,7 @@ def test_generate_analysis_batches_large_datasets_and_returns_final_summary(monk
 def test_create_analysis_rejects_when_daily_limit_reached(monkeypatch) -> None:
     repository = StubAnalysisRepository()
     repository.analyses = [
-        SimpleNamespace(
-            id=1,
-            user_id=1,
-            record_id=None,
-            analysis_type="single",
-            day_key=date.today(),
-            created_at=datetime.now(UTC),
-            content="a",
-        ),
+        SimpleNamespace(id=1, user_id=1, record_id=None, analysis_type="single", day_key=date.today(), created_at=datetime.now(UTC), content="a")
     ]
     service = AnalysisService(repository, StubTemplateRepository())
     monkeypatch.setattr(settings, "DAILY_ANALYSIS_LIMIT", 1)
@@ -242,36 +207,40 @@ def test_build_analysis_text_extracts_summary() -> None:
         make_record(
             1,
             1,
-            "\n".join([
-                "情绪分值(1~10)：8",
-                "天气：晴",
-                "睡眠：7小时",
-                "运动：散步",
-                "三餐：正常",
-                "做了什么：复盘",
-                "遇到了什么问题：拖延",
-                "解决方法：拆分任务",
-                "感恩：家人",
-                "需要改进：早睡",
-                "其他：无",
-            ]),
+            "\n".join(
+                [
+                    "情绪分值(1~10)：8",
+                    "天气：晴",
+                    "睡眠：7小时",
+                    "运动：散步",
+                    "三餐：正常",
+                    "做了什么：复盘",
+                    "遇到了什么问题：拖延",
+                    "解决方法：拆分任务",
+                    "感恩：家人",
+                    "需要改进：早睡",
+                    "其他：无",
+                ]
+            ),
         ),
         make_record(
             2,
             1,
-            "\n".join([
-                "情绪分值(1~10)：6",
-                "天气：晴",
-                "睡眠：6小时",
-                "运动：散步",
-                "三餐：正常",
-                "做了什么：运动",
-                "遇到了什么问题：拖延",
-                "解决方法：先做五分钟",
-                "感恩：家人",
-                "需要改进：早睡",
-                "其他：无",
-            ]),
+            "\n".join(
+                [
+                    "情绪分值(1~10)：6",
+                    "天气：晴",
+                    "睡眠：6小时",
+                    "运动：散步",
+                    "三餐：正常",
+                    "做了什么：运动",
+                    "遇到了什么问题：拖延",
+                    "解决方法：先做五分钟",
+                    "感恩：家人",
+                    "需要改进：早睡",
+                    "其他：无",
+                ]
+            ),
         ),
     ]
 
@@ -282,6 +251,21 @@ def test_build_analysis_text_extracts_summary() -> None:
     assert "平均情绪分值：7.0" in result
     assert "高频问题：拖延(2)" in result
     assert "高频感恩内容：家人(2)" in result
+
+
+def test_emotional_context_detects_low_energy_and_two_week_streak() -> None:
+    today = date(2026, 3, 30)
+    records = []
+    for offset in range(1, 15):
+        current_day = datetime(2026, 3, 30, 8, 0, tzinfo=UTC) - timedelta(days=offset)
+        records.append(make_record(offset, 1, "情绪分值(1~10)：2", current_day))
+    records.append(make_record(99, 1, "情绪分值(1~10)：4\n其他：有点累", datetime(2026, 3, 30, 9, 0, tzinfo=UTC)))
+
+    context = AnalysisSummaryService.build_emotional_context_text(records, analysis_day=today)
+
+    assert "低能量状态" in context
+    assert "最小一步" in context
+    assert "连续14个自然日情绪分值都低于3" in context
 
 
 def test_filter_records_by_range_keeps_recent_records_only(monkeypatch) -> None:
@@ -307,15 +291,7 @@ def test_delete_analysis_keeps_today_usage_count() -> None:
     repository = StubAnalysisRepository()
     today = date.today()
     repository.analyses = [
-        SimpleNamespace(
-            id=1,
-            user_id=1,
-            record_id=None,
-            analysis_type="single",
-            content="analysis content",
-            day_key=today,
-            created_at=datetime.now(UTC),
-        ),
+        SimpleNamespace(id=1, user_id=1, record_id=None, analysis_type="single", content="analysis content", day_key=today, created_at=datetime.now(UTC))
     ]
     service = AnalysisService(repository, StubTemplateRepository())
 
@@ -329,10 +305,28 @@ def test_delete_analysis_keeps_today_usage_count() -> None:
 def test_today_analysis_count_exposes_llm_enabled(monkeypatch) -> None:
     service = AnalysisService(StubAnalysisRepository(), StubTemplateRepository())
     monkeypatch.setattr(settings, "ANALYSIS_LLM_ENABLED", False)
+    monkeypatch.setattr(settings, "DAILY_ANALYSIS_LIMIT_WHEN_LLM_DISABLED", 5)
 
     result = service.today_analysis_count(1)
 
     assert result["llm_enabled"] is False
+    assert result["limit"] == 5
+
+
+def test_create_analysis_uses_disabled_llm_limit(monkeypatch) -> None:
+    repository = StubAnalysisRepository()
+    repository.analyses = [
+        SimpleNamespace(id=1, user_id=1, record_id=None, analysis_type="single", day_key=date.today(), created_at=datetime.now(UTC), content="a")
+    ]
+    service = AnalysisService(repository, StubTemplateRepository())
+    monkeypatch.setattr(settings, "ANALYSIS_LLM_ENABLED", False)
+    monkeypatch.setattr(settings, "DAILY_ANALYSIS_LIMIT_WHEN_LLM_DISABLED", 1)
+
+    with pytest.raises(HTTPException) as exc:
+        service.create_analysis(1, AnalysisCreate(record_id=None, content="new", day_key=date.today()))
+
+    assert exc.value.status_code == 400
+    assert exc.value.detail == "Daily analysis limit reached (1)"
 
 
 def test_generate_analysis_filters_records_by_template_and_persists_template_id(monkeypatch) -> None:
@@ -354,3 +348,40 @@ def test_generate_analysis_filters_records_by_template_and_persists_template_id(
     assert "【分析范围】模板：晨间复盘" in result.content
     assert [record.id for record in llm_service.calls[0]["records"]] == [1, 2]
     assert llm_service.calls[0]["range_label"] == "模板：晨间复盘"
+def test_generate_analysis_appends_rest_guidance_for_crisis_records(monkeypatch) -> None:
+    repository = StubAnalysisRepository()
+    current_time = datetime.now(UTC)
+    repository.records = [
+        make_record(1, 1, "其他：还行", current_time),
+        make_record(2, 1, "其他：好烦，不想动", current_time + timedelta(minutes=1)),
+    ]
+    llm_service = StubLLMAnalysisService("【分析范围】全部\n总体趋势：今天波动较大。")
+    service = AnalysisService(repository, StubTemplateRepository(), llm_service)
+    monkeypatch.setattr(settings, "ANALYSIS_THRESHOLD", 2)
+    monkeypatch.setattr(service.weather_service, "get_current_snapshot", lambda: None)
+
+    result = service.generate_analysis(1, AnalysisGenerateRequest(record_id=None, range_months=0))
+
+    assert "请先休息" in result.content
+    assert "喝水" in result.content
+
+
+def test_generate_analysis_appends_sunlight_guidance_when_weather_matches(monkeypatch) -> None:
+    repository = StubAnalysisRepository()
+    current_time = datetime.now(UTC)
+    repository.records = [
+        make_record(1, 1, "其他：还行", current_time),
+        make_record(2, 1, "其他：好烦", current_time + timedelta(minutes=1)),
+    ]
+    llm_service = StubLLMAnalysisService("【分析范围】全部\n总体趋势：今天波动较大。")
+    service = AnalysisService(repository, StubTemplateRepository(), llm_service)
+    monkeypatch.setattr(settings, "ANALYSIS_THRESHOLD", 2)
+    monkeypatch.setattr(
+        service.weather_service,
+        "get_current_snapshot",
+        lambda: WeatherSnapshot(location_label="上海", is_sunny=True, is_daylight=True, weather_code=0),
+    )
+
+    result = service.generate_analysis(1, AnalysisGenerateRequest(record_id=None, range_months=0))
+
+    assert "晒晒太阳" in result.content

@@ -20,64 +20,46 @@ AVG_TEXT = "平均情绪分值"
 
 
 def build_record_content(index: int) -> str:
-    return "\n".join([
-        f"{EMOTION_LABEL}：{index % 10 + 1}",
-        f"{WEATHER_LABEL}：晴",
-        f"{SLEEP_LABEL}：8小时",
-        f"{EXERCISE_LABEL}：散步",
-        f"{MEALS_LABEL}：正常",
-        f"{DID_WHAT_LABEL}：事项{index}",
-        f"{PROBLEM_LABEL}：拖延",
-        f"{SOLUTION_LABEL}：拆分任务",
-        f"{GRATITUDE_LABEL}：家人",
-        f"{IMPROVEMENT_LABEL}：早睡",
-        f"{OTHER_LABEL}：无",
-    ])
+    return "\n".join(
+        [
+            f"{EMOTION_LABEL}：{index % 10 + 1}",
+            f"{WEATHER_LABEL}：晴",
+            f"{SLEEP_LABEL}：7小时",
+            f"{EXERCISE_LABEL}：散步",
+            f"{MEALS_LABEL}：正常",
+            f"{DID_WHAT_LABEL}：事项{index}",
+            f"{PROBLEM_LABEL}：拖延",
+            f"{SOLUTION_LABEL}：拆分任务",
+            f"{GRATITUDE_LABEL}：家人",
+            f"{IMPROVEMENT_LABEL}：早睡",
+            f"{OTHER_LABEL}：无",
+        ]
+    )
 
 
 def test_generate_analysis_requires_threshold(client: TestClient, auth_headers: dict[str, str], monkeypatch) -> None:
     monkeypatch.setattr(settings, "ANALYSIS_THRESHOLD", 2)
 
-    client.post(
-        "/api/v1/records",
-        json={"title": "Only One", "content": build_record_content(1)},
-        headers=auth_headers,
-    )
+    client.post("/api/v1/records", json={"title": "Only One", "content": build_record_content(1)}, headers=auth_headers)
 
-    response = client.post(
-        "/api/v1/analyses/generate",
-        json={"record_id": None, "range_months": 0},
-        headers=auth_headers,
-    )
+    response = client.post("/api/v1/analyses/generate", json={"record_id": None, "range_months": 0}, headers=auth_headers)
 
     assert response.status_code == 400
     assert response.json()["detail"] == "At least 2 records are required for analysis"
 
 
-def test_generate_analysis_does_not_append_to_record_and_updates_count(
-    client: TestClient,
-    auth_headers: dict[str, str],
-    monkeypatch,
-) -> None:
+def test_generate_analysis_does_not_append_to_record_and_updates_count(client: TestClient, auth_headers: dict[str, str], monkeypatch) -> None:
     monkeypatch.setattr(settings, "ANALYSIS_THRESHOLD", 2)
     monkeypatch.setattr(settings, "DAILY_ANALYSIS_LIMIT", 3)
     monkeypatch.setattr(settings, "ANALYSIS_LLM_ENABLED", False)
 
     latest_record_id = None
     for index in range(2):
-        response = client.post(
-            "/api/v1/records",
-            json={"title": f"Record {index}", "content": build_record_content(index)},
-            headers=auth_headers,
-        )
+        response = client.post("/api/v1/records", json={"title": f"Record {index}", "content": build_record_content(index)}, headers=auth_headers)
         assert response.status_code == 201
         latest_record_id = response.json()["id"]
 
-    generate_response = client.post(
-        "/api/v1/analyses/generate",
-        json={"record_id": latest_record_id, "range_months": 3},
-        headers=auth_headers,
-    )
+    generate_response = client.post("/api/v1/analyses/generate", json={"record_id": latest_record_id, "range_months": 3}, headers=auth_headers)
     assert generate_response.status_code == 201
     analysis = generate_response.json()
     assert analysis["record_id"] == latest_record_id
@@ -94,11 +76,7 @@ def test_generate_analysis_does_not_append_to_record_and_updates_count(
     assert count_payload["day_key"] == date.today().isoformat()
 
 
-def test_generate_analysis_by_template_only_uses_records_with_same_template(
-    client: TestClient,
-    auth_headers: dict[str, str],
-    monkeypatch,
-) -> None:
+def test_generate_analysis_by_template_only_uses_records_with_same_template(client: TestClient, auth_headers: dict[str, str], monkeypatch) -> None:
     monkeypatch.setattr(settings, "ANALYSIS_THRESHOLD", 2)
     monkeypatch.setattr(settings, "DAILY_ANALYSIS_LIMIT", 3)
 
@@ -125,11 +103,7 @@ def test_generate_analysis_by_template_only_uses_records_with_same_template(
     )
     assert other_response.status_code == 201
 
-    generate_response = client.post(
-        "/api/v1/analyses/generate",
-        json={"template_id": template_id, "range_months": 0},
-        headers=auth_headers,
-    )
+    generate_response = client.post("/api/v1/analyses/generate", json={"template_id": template_id, "range_months": 0}, headers=auth_headers)
 
     assert generate_response.status_code == 201
     analysis = generate_response.json()
@@ -140,16 +114,8 @@ def test_generate_analysis_by_template_only_uses_records_with_same_template(
 def test_create_analysis_respects_daily_limit(client: TestClient, auth_headers: dict[str, str], monkeypatch) -> None:
     monkeypatch.setattr(settings, "DAILY_ANALYSIS_LIMIT", 1)
 
-    first_response = client.post(
-        "/api/v1/analyses",
-        json={"record_id": None, "content": "manual analysis", "day_key": date.today().isoformat()},
-        headers=auth_headers,
-    )
-    second_response = client.post(
-        "/api/v1/analyses",
-        json={"record_id": None, "content": "manual analysis 2", "day_key": date.today().isoformat()},
-        headers=auth_headers,
-    )
+    first_response = client.post("/api/v1/analyses", json={"record_id": None, "content": "manual analysis", "day_key": date.today().isoformat()}, headers=auth_headers)
+    second_response = client.post("/api/v1/analyses", json={"record_id": None, "content": "manual analysis 2", "day_key": date.today().isoformat()}, headers=auth_headers)
 
     assert first_response.status_code == 201
     assert second_response.status_code == 400
@@ -159,11 +125,7 @@ def test_create_analysis_respects_daily_limit(client: TestClient, auth_headers: 
 def test_aggregate_analyses_returns_saved_content(client: TestClient, auth_headers: dict[str, str], monkeypatch) -> None:
     monkeypatch.setattr(settings, "DAILY_ANALYSIS_LIMIT", 3)
 
-    create_response = client.post(
-        "/api/v1/analyses",
-        json={"record_id": None, "content": "saved analysis", "day_key": date.today().isoformat()},
-        headers=auth_headers,
-    )
+    create_response = client.post("/api/v1/analyses", json={"record_id": None, "content": "saved analysis", "day_key": date.today().isoformat()}, headers=auth_headers)
     assert create_response.status_code == 201
 
     aggregate_response = client.get("/api/v1/analyses/aggregate", headers=auth_headers)
@@ -175,18 +137,10 @@ def test_aggregate_analyses_returns_saved_content(client: TestClient, auth_heade
     assert "saved analysis" in payload["content"]
 
 
-def test_delete_analysis_keeps_today_count_but_clears_history(
-    client: TestClient,
-    auth_headers: dict[str, str],
-    monkeypatch,
-) -> None:
+def test_delete_analysis_keeps_today_count_but_clears_history(client: TestClient, auth_headers: dict[str, str], monkeypatch) -> None:
     monkeypatch.setattr(settings, "DAILY_ANALYSIS_LIMIT", 3)
 
-    create_response = client.post(
-        "/api/v1/analyses",
-        json={"record_id": None, "content": "saved analysis", "day_key": date.today().isoformat()},
-        headers=auth_headers,
-    )
+    create_response = client.post("/api/v1/analyses", json={"record_id": None, "content": "saved analysis", "day_key": date.today().isoformat()}, headers=auth_headers)
     assert create_response.status_code == 201
     analysis_id = create_response.json()["id"]
 

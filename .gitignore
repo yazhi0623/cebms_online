@@ -31,6 +31,7 @@ build/
 .eslintcache
 # 保护你的 API 密钥
 .env
+.env.prod
 ! .env.example
 
 # --- 后端 (Python) 垃圾 (重点清理对象) ---

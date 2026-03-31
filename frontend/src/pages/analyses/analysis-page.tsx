@@ -48,6 +48,51 @@ const AI_SUPPLEMENT_HEADING = "AI补充分析：";
 const NEXT_STEP_HEADING = "下一步建议：";
 const ANALYSIS_SAMPLE_NOTICE = "AI分析功能暂时关闭，目前生成样本数据";
 
+const DEMO_ANALYSES: AnalysisItem[] = [
+  {
+    id: -1,
+    userId: 0,
+    recordId: null,
+    templateId: null,
+    analysisType: "single",
+    title: "AI分析·全部·2026-03-28",
+    content:
+      "总体趋势：最近几天状态有明显波动，白天更容易疲惫，晚上会反复想事情。\n\n状态变化：前半段还能维持基本节奏，后半段开始出现拖延和回避。\n\n主要触发因素：睡眠不足、任务堆积、对结果担心过多。\n\n已出现的有效应对：写下要做的事、缩小当天目标后，执行阻力会下降。\n\n下一步建议：先只保留一件最重要的小事，完成后就停止加码。",
+    dayKey: "2026-03-28",
+    createdAt: "2026-03-28T20:30:00",
+    isBatchChunk: false,
+    isFinalSummary: false,
+  },
+  {
+    id: -2,
+    userId: 0,
+    recordId: null,
+    templateId: null,
+    analysisType: "batch_summary",
+    title: "AI分析·前三个月·2026-03-30",
+    content:
+      "总体趋势：近三个月情绪波动和精力起伏都比较明显，低谷通常出现在连续忙碌或睡眠不稳之后。\n\n状态变化：偶尔会有几天恢复得不错，但一旦节奏被打乱，容易重新进入低能量状态。\n\n重复出现的问题模式：任务一多就容易拖到很晚，拖延后又加重内耗。\n\n已出现的有效应对：拆小步骤、减少当天目标、保留固定的休息时段。\n\n下一步建议：继续观察睡眠和任务密度对情绪的影响，每天只记录一个最想改善的问题。",
+    dayKey: "2026-03-30",
+    createdAt: "2026-03-30T09:15:00",
+    isBatchChunk: false,
+    isFinalSummary: true,
+  },
+];
+
+const DEMO_ANALYSIS_AGGREGATE: AnalysisAggregate = {
+  totalCount: DEMO_ANALYSES.length,
+  latestDay: "2026-03-30",
+  combinedContent: DEMO_ANALYSES.map((item) => `${item.title}\n${item.content}`).join("\n\n"),
+};
+
+const DEMO_TODAY_COUNT: TodayAnalysisCount = {
+  date: "2026-03-30",
+  count: 1,
+  limit: 20,
+  threshold: 10,
+  llmEnabled: true,
+};
+
 function splitAnalysisParagraphs(content: string): string[] {
   return (content ?? "")
     .split(/\n{2,}/)
@@ -346,9 +391,9 @@ export function AnalysisPage() {
       if (markInitialized) {
         initialLoadingStartedAtRef.current = Date.now();
       }
-      setAnalyses([]);
-      setAggregate(null);
-      setTodayCount(null);
+      setAnalyses(DEMO_ANALYSES);
+      setAggregate(DEMO_ANALYSIS_AGGREGATE);
+      setTodayCount(DEMO_TODAY_COUNT);
       setRecords([]);
       setTemplates([]);
       setError(null);
@@ -359,7 +404,7 @@ export function AnalysisPage() {
           setInitialLoading(false);
         }, remaining);
       }
-      return { todayCount: null };
+      return { todayCount: DEMO_TODAY_COUNT };
     }
 
     let hasWarmCache = false;

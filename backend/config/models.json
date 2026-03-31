@@ -1,20 +1,44 @@
 {
-  "current_model_index": 1,
+  "current_model_index": 9,
   "failed_attempts": {
-    "qwen3.5-plus": {
-      "failed_time": "2026-03-19 12:36:35",
-      "status_code": 403
-    },
-    "qwen-plus": {
-      "failed_time": "2026-03-19 12:36:41",
-      "status_code": 403
-    },
     "qwen-max": {
-      "failed_time": "2026-03-19 14:36:25",
-      "status_code": 403
+      "failed_time": "2026-03-30 22:05:31",
+      "status_code": 401
+    },
+    "qwen3-coder-plus": {
+      "failed_time": "2026-03-30 22:05:33",
+      "status_code": 401
+    },
+    "qwen-flash": {
+      "failed_time": "2026-03-30 22:05:34",
+      "status_code": 401
+    },
+    "qwq-plus": {
+      "failed_time": "2026-03-30 22:05:35",
+      "status_code": 401
+    },
+    "qwen-vl-max": {
+      "failed_time": "2026-03-30 22:05:36",
+      "status_code": 401
+    },
+    "qwen-vl-max-latest": {
+      "failed_time": "2026-03-30 22:05:37",
+      "status_code": 401
+    },
+    "qvq-max": {
+      "failed_time": "2026-03-30 22:05:38",
+      "status_code": 401
+    },
+    "qvq-plus": {
+      "failed_time": "2026-03-30 22:05:39",
+      "status_code": 401
+    },
+    "qvq-plus-latest": {
+      "failed_time": "2026-03-30 22:05:40",
+      "status_code": 401
     }
   },
-  "last_updated": "2026-03-19 14:36:25",
+  "last_updated": "2026-03-30 22:05:40",
   "models": [
     {
       "name": "qwen-max",
