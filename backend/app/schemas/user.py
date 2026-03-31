@@ -18,9 +18,30 @@ class UserRead(BaseModel):
 
     id: int
     username: str
+    gender: str | None = None
+    city: str | None = None
+    phone: str | None = None
+    email: str | None = None
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class UserProfileUpdate(BaseModel):
+    """用户可自行编辑的最小资料。"""
+
+    username: str = Field(min_length=3, max_length=50, pattern=USERNAME_PATTERN)
+    gender: str | None = Field(default=None, max_length=20)
+    city: str | None = Field(default=None, max_length=100)
+    phone: str | None = Field(default=None, max_length=30)
+    email: str | None = Field(default=None, max_length=255)
+
+
+class UserProfileUpdateResult(BaseModel):
+    user: UserRead
+    access_token: str
+    refresh_token: str
+    token_type: str = "bearer"
 
 
 class UserLogin(BaseModel):

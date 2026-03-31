@@ -124,6 +124,22 @@ textarea {
   color: #8e6448;
 }
 
+.shell__user-link {
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.shell__user-link:hover,
+.shell__user-link:focus-visible {
+  color: #684933;
+  outline: none;
+}
+
 .shell__nav-button {
   border: 1px solid rgba(104, 73, 51, 0.2);
   background: rgba(255, 251, 246, 0.72);
@@ -1814,6 +1830,115 @@ textarea {
   backdrop-filter: blur(3px);
   z-index: 110;
   padding: 20px;
+}
+
+.profile-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 111;
+  display: grid;
+  justify-items: end;
+  align-items: start;
+  padding: 88px 24px 24px;
+  background: transparent;
+  pointer-events: none;
+}
+
+.profile-modal-card {
+  position: relative;
+  width: min(360px, calc(100vw - 32px));
+  min-height: 0;
+  padding: 18px 22px 22px;
+  border: 1px solid rgba(104, 73, 51, 0.32);
+  border-radius: 24px;
+  background: linear-gradient(180deg, rgba(255, 251, 246, 0.98), rgba(244, 236, 226, 0.98));
+  box-shadow: 0 24px 60px rgba(62, 47, 36, 0.18);
+  display: grid;
+  align-content: start;
+  gap: 14px;
+  pointer-events: auto;
+}
+
+.profile-modal-card__close {
+  position: absolute;
+  top: 12px;
+  right: 14px;
+  border: 0;
+  background: transparent;
+  color: #8e6448;
+  font-size: 28px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+}
+
+.profile-modal-card__title {
+  margin: 0;
+  text-align: center;
+  font-size: clamp(22px, 3vw, 34px);
+  line-height: 1.1;
+  color: #3f3026;
+}
+
+.profile-modal-card__hint {
+  margin: -8px 0 0;
+  text-align: center;
+  font-size: 14px;
+  color: #7f604d;
+}
+
+.profile-modal-card__row {
+  display: grid;
+  grid-template-columns: 72px minmax(0, 1fr);
+  align-items: center;
+  gap: 18px;
+}
+
+.profile-modal-card__row span {
+  font-size: 16px;
+  color: #3f3026;
+}
+
+.profile-modal-card__row input,
+.profile-modal-card__row select {
+  width: 100%;
+  min-height: 50px;
+  padding: 8px 12px;
+  border: 1px solid rgba(104, 73, 51, 0.28);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.9);
+  color: #3f3026;
+}
+
+.profile-modal-card__row select {
+  appearance: none;
+  -webkit-appearance: none;
+  background-image:
+    linear-gradient(45deg, transparent 50%, #8f6950 50%),
+    linear-gradient(135deg, #8f6950 50%, transparent 50%);
+  background-position:
+    calc(100% - 18px) calc(50% - 2px),
+    calc(100% - 12px) calc(50% - 2px);
+  background-size: 6px 6px, 6px 6px;
+  background-repeat: no-repeat;
+  padding-right: 34px;
+}
+
+
+.profile-modal-card__error {
+  margin: -8px 0 0;
+  font-size: 13px;
+  color: #b44528;
+  text-align: center;
+}
+
+.profile-modal-card__actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.profile-modal-card__actions .shell__nav-button {
+  min-width: 112px;
 }
 
 .auth-tab {

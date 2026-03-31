@@ -11,16 +11,14 @@ from app.core.security import (
 )
 from app.models.user import User
 from app.repositories.user_repository import UserRepository
-from app.schemas.user import RefreshTokenRequest, Token, UserCreate, UserLogin
+from app.schemas.user import RefreshTokenRequest, Token, UserCreate, UserLogin, UserProfileUpdate, UserProfileUpdateResult
 
 
 class AuthService:
-    """处理账号创建、登录和令牌生命周期。"""
     def __init__(self, user_repository: UserRepository) -> None:
         self.user_repository = user_repository
 
     def register(self, user_in: UserCreate) -> User:
-        """在校验用户名唯一后创建新用户。"""
         if not settings.AUTH_REGISTRATION_ENABLED:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
@@ -40,7 +38,6 @@ class AuthService:
         )
 
     def login(self, user_in: UserLogin, client_key: str | None = None) -> Token:
-        """校验账号密码并返回一组新令牌。"""
         if client_key:
             auth_rate_limiter.ensure_login_allowed(client_key)
 
@@ -62,7 +59,6 @@ class AuthService:
         )
 
     def refresh_token(self, token_in: RefreshTokenRequest) -> Token:
-        """用有效刷新令牌重新签发一组新令牌。"""
         payload = decode_token(token_in.refresh_token)
         if payload.get("type") != "refresh":
             raise HTTPException(
@@ -90,6 +86,33 @@ class AuthService:
         )
 
     def logout(self, current_user: User) -> dict[str, str]:
-        """撤销当前用户既有令牌。"""
         self.user_repository.increment_token_version(current_user)
         return {"message": "Logged out"}
+
+    def update_profile(self, current_user: User, profile_in: UserProfileUpdate) -> UserProfileUpdateResult:
+        username = profile_in.username.strip()
+        existing_user = self.user_repository.get_by_username(username)
+        if existing_user is not None and existing_user.id != current_user.id:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Username already exists",
+            )
+
+        gender = (profile_in.gender or "").strip() or None
+        city = (profile_in.city or "").strip() or None
+        phone = (profile_in.phone or "").strip() or None
+        email = (profile_in.email or "").strip() or None
+        current_user.token_version += 1
+        user = self.user_repository.update_profile(
+            current_user,
+            username=username,
+            gender=gender,
+            city=city,
+            phone=phone,
+            email=email,
+        )
+        return UserProfileUpdateResult(
+            user=user,
+            access_token=create_access_token(subject=user.username, token_version=user.token_version),
+            refresh_token=create_refresh_token(subject=user.username, token_version=user.token_version),
+        )

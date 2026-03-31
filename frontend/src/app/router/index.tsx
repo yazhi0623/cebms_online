@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { CSSProperties } from "react";
 
+import { ProfileModal } from "../../features/auth/profile-modal";
 import { LoginPage } from "../../pages/auth/login-page";
 import { routes } from "../../shared/constants/routes";
 import { useAuth } from "../../shared/hooks/use-auth";
@@ -15,7 +16,7 @@ function middleEllipsis(value: string, maxChars: number) {
   const visibleChars = Math.max(2, maxChars - 1);
   const headChars = Math.ceil(visibleChars / 2);
   const tailChars = Math.floor(visibleChars / 2);
-  return `${value.slice(0, headChars)}…${value.slice(value.length - tailChars)}`;
+  return `${value.slice(0, headChars)}...${value.slice(value.length - tailChars)}`;
 }
 
 function fitMiddleEllipsisToWidth(value: string, maxWidth: number, font: string) {
@@ -53,16 +54,19 @@ function fitMiddleEllipsisToWidth(value: string, maxWidth: number, font: string)
 }
 
 export function AppRouter() {
-  const { currentUser, loading, logout } = useAuth();
+  const { currentUser, loading, logout, updateProfile } = useAuth();
   const { navigate } = useNavigation();
   const [pathname, setPathname] = useState(window.location.pathname);
   const [portraitLayout, setPortraitLayout] = useState(window.matchMedia("(orientation: portrait)").matches);
   const [lastContentPath, setLastContentPath] = useState(
     window.location.pathname === routes.login ? routes.records : window.location.pathname,
   );
+  const [profileModalOpen, setProfileModalOpen] = useState(false);
+  const [profileSaving, setProfileSaving] = useState(false);
+  const [profileError, setProfileError] = useState("");
   const brandMetaRef = useRef<HTMLDivElement | null>(null);
   const subtitleRef = useRef<HTMLParagraphElement | null>(null);
-  const compactUserRef = useRef<HTMLSpanElement | null>(null);
+  const compactUserRef = useRef<HTMLButtonElement | null>(null);
   const authActionRef = useRef<HTMLButtonElement | null>(null);
 
   useEffect(() => {
@@ -95,11 +99,21 @@ export function AppRouter() {
     };
   }, []);
 
+  useEffect(() => {
+    if (!currentUser) {
+      setProfileModalOpen(false);
+    }
+  }, [currentUser]);
+
   const authModalOpen = !currentUser && pathname === routes.login;
   const currentRoute = resolveRoute(authModalOpen ? lastContentPath : pathname);
   const navRoutes = routeDefinitions.filter((route) => route.navVisible && route.path !== routes.login);
-  const sessionLabel = loading ? "检查会话中" : currentUser ? currentUser.username : "访客";
-  const sessionTextLabel = loading ? "检查会话中" : currentUser ? `当前用户：${currentUser.username}` : "访客";
+  const sessionLabel = loading ? "\u68c0\u67e5\u4f1a\u8bdd\u4e2d" : currentUser ? currentUser.username : "\u8bbf\u5ba2";
+  const sessionTextLabel = loading
+    ? "\u68c0\u67e5\u4f1a\u8bdd\u4e2d"
+    : currentUser
+      ? "\u5f53\u524d\u7528\u6237\uff1a"
+      : "\u8bbf\u5ba2";
   const [compactSessionLabel, setCompactSessionLabel] = useState(sessionLabel);
   const [compactUserWidth, setCompactUserWidth] = useState<number | null>(null);
   const contentClassName =
@@ -167,6 +181,29 @@ export function AppRouter() {
     };
   }, [currentUser, portraitLayout, sessionLabel]);
 
+  async function handleProfileSave(profile: {
+    username: string;
+    gender: string;
+    city: string;
+    phone: string;
+    email: string;
+  }) {
+    if (!updateProfile) {
+      setProfileError("\u4fdd\u5b58\u5931\u8d25");
+      return;
+    }
+    setProfileSaving(true);
+    setProfileError("");
+    try {
+      await updateProfile(profile);
+      setProfileModalOpen(false);
+    } catch (error) {
+      setProfileError(error instanceof Error ? error.message : "\u4fdd\u5b58\u5931\u8d25");
+    } finally {
+      setProfileSaving(false);
+    }
+  }
+
   return (
     <div
       className={portraitLayout ? "shell shell--portrait" : "shell"}
@@ -181,19 +218,35 @@ export function AppRouter() {
       <header className={portraitLayout ? "shell__header shell__header--portrait" : "shell__header"}>
         <div>
           <div className="shell__brand-row">
-            <h1 className="shell__title">你一生的故事</h1>
+            <h1 className="shell__title">{"\u4f60\u4e00\u751f\u7684\u6545\u4e8b"}</h1>
             <div className="shell__brand-meta" ref={brandMetaRef}>
               <p className="shell__subtitle" ref={subtitleRef}>
-                记录走向未来的足迹
+                {"\u8bb0\u5f55\u8d70\u5411\u672a\u6765\u7684\u8db3\u8ff9"}
               </p>
-              <span
-                className="shell__compact-user"
-                ref={compactUserRef}
-                style={compactUserWidth ? { width: `${compactUserWidth}px` } : undefined}
-                title={currentUser?.username ?? sessionLabel}
-              >
-                {loading ? sessionLabel : compactSessionLabel}
-              </span>
+              {currentUser ? (
+                <button
+                  className="shell__compact-user shell__user-link"
+                  onClick={() => {
+                    setProfileError("");
+                    setProfileModalOpen(true);
+                  }}
+                  ref={compactUserRef}
+                  style={compactUserWidth ? { width: `${compactUserWidth}px` } : undefined}
+                  title={currentUser.username}
+                  type="button"
+                >
+                  {compactSessionLabel}
+                </button>
+              ) : (
+                <span
+                  className="shell__compact-user"
+                  ref={compactUserRef}
+                  style={compactUserWidth ? { width: `${compactUserWidth}px` } : undefined}
+                  title={sessionLabel}
+                >
+                  {loading ? sessionLabel : compactSessionLabel}
+                </span>
+              )}
             </div>
           </div>
         </div>
@@ -217,30 +270,47 @@ export function AppRouter() {
             })}
           </nav>
           <div className="shell__session">
-            <span className="shell__session-text">{sessionTextLabel}</span>
             {currentUser ? (
-              <button
-                className="shell__nav-button"
-                onClick={() => {
-                  void logout();
-                  void navigate(routes.login);
-                }}
-                ref={authActionRef}
-                type="button"
-              >
-                退出
-              </button>
+              <>
+                <span className="shell__session-text">
+                  {sessionTextLabel}
+                  <button
+                    className="shell__user-link"
+                    onClick={() => {
+                      setProfileError("");
+                      setProfileModalOpen(true);
+                    }}
+                    type="button"
+                  >
+                    {currentUser.username}
+                  </button>
+                </span>
+                <button
+                  className="shell__nav-button"
+                  onClick={() => {
+                    void logout();
+                    void navigate(routes.login);
+                  }}
+                  ref={authActionRef}
+                  type="button"
+                >
+                  {"\u9000\u51fa"}
+                </button>
+              </>
             ) : (
-              <button
-                className="shell__nav-button"
-                onClick={() => {
-                  void navigate(routes.login);
-                }}
-                ref={authActionRef}
-                type="button"
-              >
-                登录/注册
-              </button>
+              <>
+                <span className="shell__session-text">{sessionTextLabel}</span>
+                <button
+                  className="shell__nav-button"
+                  onClick={() => {
+                    void navigate(routes.login);
+                  }}
+                  ref={authActionRef}
+                  type="button"
+                >
+                  {"\u767b\u5f55/\u6ce8\u518c"}
+                </button>
+              </>
             )}
           </div>
         </div>
@@ -256,6 +326,18 @@ export function AppRouter() {
               }}
             />
           </div>
+        ) : null}
+        {currentUser && profileModalOpen ? (
+          <ProfileModal
+            currentUser={currentUser}
+            error={profileError}
+            onClose={() => {
+              setProfileError("");
+              setProfileModalOpen(false);
+            }}
+            onSave={handleProfileSave}
+            saving={profileSaving}
+          />
         ) : null}
       </main>
     </div>
