@@ -52,6 +52,7 @@ def test_generate_analysis_does_not_append_to_record_and_updates_count(client: T
     monkeypatch.setattr(settings, "ANALYSIS_THRESHOLD", 2)
     monkeypatch.setattr(settings, "DAILY_ANALYSIS_LIMIT", 3)
     monkeypatch.setattr(settings, "ANALYSIS_LLM_ENABLED", False)
+    monkeypatch.setattr(settings, "DAILY_ANALYSIS_LIMIT_WHEN_LLM_DISABLED", 3)
 
     latest_record_id = None
     for index in range(2):
