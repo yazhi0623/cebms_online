@@ -148,7 +148,7 @@ def test_generate_analysis_uses_llm_result_when_available(monkeypatch) -> None:
     result = service.generate_analysis(1, AnalysisGenerateRequest(record_id=None, range_months=0))
 
     assert "【分析范围】全部" in result.content
-    assert "AI补充分析：" in result.content
+    assert "AI分析：" in result.content
     assert "总体趋势：稳定" in result.content
     assert result.analysis_type == "single"
     assert llm_service.calls[0]["range_label"] == "全部"
@@ -248,9 +248,23 @@ def test_build_analysis_text_extracts_summary() -> None:
 
     assert "【分析范围】前三个月" in result
     assert "本次纳入分析的记录数：2 条" in result
-    assert "平均情绪分值：7.0" in result
-    assert "高频问题：拖延(2)" in result
-    assert "高频感恩内容：家人(2)" in result
+    assert "平均情绪分值" not in result
+    assert "高频问题" not in result
+    assert "高频感恩内容" not in result
+
+
+def test_generate_analysis_keeps_backend_record_count_and_ai_body_separate(monkeypatch) -> None:
+    repository = StubAnalysisRepository()
+    repository.records = [make_record(1, 1, "x"), make_record(2, 1, "y"), make_record(3, 1, "z")]
+    llm_service = StubLLMAnalysisService("【分析范围】全部\n比较严重的问题或高频问题：拖延已经反复出现。\n下一步建议：先做五分钟。")
+    service = AnalysisService(repository, StubTemplateRepository(), llm_service)
+    monkeypatch.setattr(settings, "ANALYSIS_THRESHOLD", 2)
+
+    result = service.generate_analysis(1, AnalysisGenerateRequest(record_id=None, range_months=0))
+
+    assert "本次纳入分析的记录数：3 条" in result.content
+    assert "AI分析：" in result.content
+    assert "比较严重的问题或高频问题：拖延已经反复出现。" in result.content
 
 
 def test_emotional_context_detects_low_energy_and_two_week_streak() -> None:
@@ -348,6 +362,8 @@ def test_generate_analysis_filters_records_by_template_and_persists_template_id(
     assert "【分析范围】模板：晨间复盘" in result.content
     assert [record.id for record in llm_service.calls[0]["records"]] == [1, 2]
     assert llm_service.calls[0]["range_label"] == "模板：晨间复盘"
+
+
 def test_generate_analysis_appends_rest_guidance_for_crisis_records(monkeypatch) -> None:
     repository = StubAnalysisRepository()
     current_time = datetime.now(UTC)

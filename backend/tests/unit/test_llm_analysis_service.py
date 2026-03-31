@@ -96,20 +96,23 @@ def test_switch_model_stops_at_last_qwen_index(tmp_path) -> None:
 
 def test_build_prompt_keeps_full_input_and_mentions_output_limit(monkeypatch) -> None:
     service = LLMAnalysisService("unused")
-    monkeypatch.setattr(settings, "ANALYSIS_MAX_LLM_OUTPUT_CHARS", 300)
+    monkeypatch.setattr(settings, "ANALYSIS_MAX_LLM_OUTPUT_CHARS", 400)
     record = Record(
         user_id=1,
         title="长记录",
         content="输入内容" * 200,
+        created_at=datetime(2026, 3, 25, 8, 0, 0, tzinfo=UTC),
         updated_at=datetime(2026, 3, 25, 8, 0, 0, tzinfo=UTC),
     )
 
     prompt = service._build_prompt([record], "全部")
 
     assert "输入内容" * 50 in prompt
-    assert "正文总长度控制在300字以内" in prompt
+    assert "正文总长度控制在400字以内，但不要为了压缩字数省略关键事实、重要问题或必要建议。" in prompt
     assert "结合每条记录的时间和内容" in prompt
     assert "状态变化" in prompt
+    assert "记录数会由系统单独展示" in prompt
+    assert "不少于三分之一的记录中出现时，才能明确称为高频" in prompt
 
 
 def test_build_prompt_orders_records_from_earliest_to_latest() -> None:
@@ -118,12 +121,14 @@ def test_build_prompt_orders_records_from_earliest_to_latest() -> None:
         user_id=1,
         title="较早记录",
         content="先前内容",
+        created_at=datetime(2026, 3, 20, 8, 0, 0, tzinfo=UTC),
         updated_at=datetime(2026, 3, 20, 8, 0, 0, tzinfo=UTC),
     )
     newer = Record(
         user_id=1,
         title="较新记录",
         content="后续内容",
+        created_at=datetime(2026, 3, 25, 9, 0, 0, tzinfo=UTC),
         updated_at=datetime(2026, 3, 25, 9, 0, 0, tzinfo=UTC),
     )
 
@@ -141,6 +146,7 @@ def test_build_prompt_includes_crisis_and_sunlight_guidance() -> None:
         user_id=1,
         title="今天",
         content="情绪分值(1~10)：2\n其他：好烦",
+        created_at=today,
         updated_at=today,
     )
     weather_snapshot = WeatherSnapshot(location_label="上海", is_sunny=True, is_daylight=True, weather_code=0)
@@ -152,11 +158,37 @@ def test_build_prompt_includes_crisis_and_sunlight_guidance() -> None:
     assert "晒太阳建议" in prompt
 
 
-def test_limit_output_length_trims_model_response(monkeypatch) -> None:
+def test_build_summary_prompt_mentions_frequency_threshold_and_system_count_display() -> None:
     service = LLMAnalysisService("unused")
-    monkeypatch.setattr(settings, "ANALYSIS_MAX_LLM_OUTPUT_CHARS", 300)
 
-    limited = service._limit_output_length("字" * 320)
+    prompt = service._build_summary_prompt(["第一组分析", "第二组分析", "第三组分析"], "全部（汇总）")
 
-    assert len(limited) == 300
-    assert limited == "字" * 300
+    assert "正文总长度控制在300字以内，但不要为了压缩字数省略关键事实、重要问题或必要建议。" in prompt
+    assert "记录数会由系统单独展示" in prompt
+    assert "不少于三分之一的分析样本中出现时，才能明确称为高频" in prompt
+    assert "比较严重的问题或高频问题" in prompt
+
+
+def test_call_model_does_not_trim_response(monkeypatch) -> None:
+    service = LLMAnalysisService("unused")
+
+    class StubCompletions:
+        @staticmethod
+        def create(**kwargs):
+            del kwargs
+            return type(
+                "Response",
+                (),
+                {"choices": [type("Choice", (), {"message": type("Message", (), {"content": "字" * 420})()})()]},
+            )()
+
+    class StubClient:
+        chat = type("Chat", (), {"completions": StubCompletions()})()
+
+    monkeypatch.setattr(service, "_build_client", lambda model_name: StubClient())
+
+    response = service._call_model("deepseek-chat", "prompt")
+
+    assert response["ok"] is True
+    assert response["status_code"] == 200
+    assert response["content"] == "字" * 420

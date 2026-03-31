@@ -274,12 +274,9 @@ class AnalysisService:
 
     @staticmethod
     def _merge_summary_with_llm_content(summary_content: str, llm_content: str) -> str:
-        if "平均情绪分值" in llm_content:
-            return llm_content
-
         summary_lines = summary_content.splitlines()
         llm_lines = llm_content.splitlines()
-        merged_lines = [summary_lines[0], *summary_lines[1:], "", "AI补充分析：", *llm_lines[1:]]
+        merged_lines = [summary_lines[0], *summary_lines[1:], "", "AI分析：", *llm_lines[1:]]
         return "\n".join(line for line in merged_lines if line is not None).strip()
 
     def _append_required_emotional_guidance(self, content: str, records) -> str:

@@ -90,7 +90,7 @@ class LLMAnalysisService:
                 temperature=0.4,
             )
             content = response.choices[0].message.content if response.choices else ""
-            cleaned = self._limit_output_length((content or "").strip())
+            cleaned = (content or "").strip()
             return {"ok": bool(cleaned), "status_code": 200, "content": cleaned or None}
         except APIError as exc:  # type: ignore[misc]
             return {"ok": False, "status_code": getattr(exc, "status_code", None), "content": None}
@@ -172,11 +172,14 @@ class LLMAnalysisService:
                 emotion_context,
                 "输出要求：",
                 "1. 第一行必须是【分析范围】加时间范围。",
-                "2. 后续按以下标题输出：总体趋势、状态变化、主要触发因素、重复出现的问题模式、已出现的有效应对、下一步建议。",
-                f"3. 第一行之后的正文总长度控制在{settings.ANALYSIS_MAX_LLM_OUTPUT_CHARS}字以内。",
-                "4. 不要输出 markdown 列表符号，不要编造记录里没有的信息。",
-                "5. 下一步建议要简单易上手并且实用能够解决现在的问题。",
-                "6. 不要输出 markdown 格式文档。",
+                "2. 后续按以下标题输出：总体趋势、状态变化、比较严重的问题或高频问题、主要触发因素、已出现的有效应对、下一步建议。",
+                f"3. 第一行之后的正文总长度控制在{settings.ANALYSIS_MAX_LLM_OUTPUT_CHARS}字以内，但不要为了压缩字数省略关键事实、重要问题或必要建议。",
+                "4. 记录数会由系统单独展示，你不要重复统计平均分、记录数、高频改进方向、高频感恩等结构化统计项。",
+                "5. 请优先指出比较严重的问题；只有当某类问题、触发因素或负向模式在不少于三分之一的记录中出现时，才能明确称为高频。",
+                "6. 如果没有达到三分之一，不要硬说高频，可以表述为偶发、若干次出现或局部出现。",
+                "7. 不要输出 markdown 列表符号，不要编造记录里没有的信息。",
+                "8. 下一步建议要简单易上手并且实用能够解决现在的问题。",
+                "9. 不要输出 markdown 格式文档。",
                 "",
                 "记录数据：",
                 "\n\n".join(record_blocks),
@@ -197,21 +200,17 @@ class LLMAnalysisService:
                 "请重点归纳用户状态随着时间推进出现了哪些变化，以及这些变化可能和哪些触发因素相关。",
                 "输出要求：",
                 "1. 第一行必须是【分析范围】加时间范围，并在末尾加（汇总）。",
-                "2. 后续按以下标题输出：总体趋势、状态变化、主要触发因素、重复出现的问题模式、已出现的有效应对、下一步建议。",
-                f"3. 第一行之后的正文总长度控制在{settings.ANALYSIS_MAX_LLM_OUTPUT_CHARS}字以内。",
-                "4. 不要重复逐组罗列，重点做跨分组归纳。",
-                "5. 不要输出 markdown 列表符号，不要编造记录里没有的信息。",
-                "6. 下一步建议要简单易上手并且实用能够解决现在的问题。",
-                "7. 不要输出 markdown 格式文档。",
+                "2. 后续按以下标题输出：总体趋势、状态变化、比较严重的问题或高频问题、主要触发因素、已出现的有效应对、下一步建议。",
+                f"3. 第一行之后的正文总长度控制在{settings.ANALYSIS_MAX_LLM_OUTPUT_CHARS}字以内，但不要为了压缩字数省略关键事实、重要问题或必要建议。",
+                "4. 记录数会由系统单独展示，你不要重复统计平均分、记录数、高频改进方向、高频感恩等结构化统计项。",
+                "5. 只有当某类问题、触发因素或负向模式在不少于三分之一的分析样本中出现时，才能明确称为高频。",
+                "6. 如果没有达到三分之一，不要硬说高频，可以表述为偶发、若干次出现或局部出现。",
+                "7. 不要重复逐组罗列，重点做跨分组归纳。",
+                "8. 不要输出 markdown 列表符号，不要编造记录里没有的信息。",
+                "9. 下一步建议要简单易上手并且实用能够解决现在的问题。",
+                "10. 不要输出 markdown 格式文档。",
                 "",
                 "分组分析数据：",
                 "\n\n".join(blocks),
             ]
         )
-
-    @staticmethod
-    def _limit_output_length(content: str) -> str:
-        max_chars = settings.ANALYSIS_MAX_LLM_OUTPUT_CHARS
-        if max_chars <= 0 or len(content) <= max_chars:
-            return content
-        return content[:max_chars].rstrip()

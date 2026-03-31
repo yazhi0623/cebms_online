@@ -24,10 +24,10 @@ import { useAuth } from "../../shared/hooks/use-auth";
 import { useConfirm } from "../../shared/hooks/use-confirm";
 
 const analysisRangeOptions = [
-  { value: "1m", label: "前一个月", months: 1 },
-  { value: "3m", label: "前三个月", months: 3 },
-  { value: "6m", label: "前六个月", months: 6 },
-  { value: "1y", label: "前一年", months: 12 },
+  { value: "1m", label: "近一个月", months: 1 },
+  { value: "3m", label: "近三个月", months: 3 },
+  { value: "6m", label: "近六个月", months: 6 },
+  { value: "1y", label: "近一年", months: 12 },
   { value: "all", label: "全部", months: 0 },
 ] as const;
 
@@ -44,7 +44,7 @@ type AnalysisBlock =
   | { type: "paragraph"; content: string }
   | { type: "heading"; heading: string; lines?: string[] };
 
-const AI_SUPPLEMENT_HEADING = "AI补充分析：";
+const AI_SUPPLEMENT_HEADING = "AI分析：";
 const NEXT_STEP_HEADING = "下一步建议：";
 const ANALYSIS_SAMPLE_NOTICE = "AI分析功能暂时关闭，目前生成样本数据";
 
@@ -110,7 +110,7 @@ function splitSuggestionLines(content: string): string[] {
 function extractHeadingBlock(paragraph: string): { heading: string; trailingContent: string } | null {
   const normalized = paragraph.trim();
   const headingPatterns = [
-    { heading: AI_SUPPLEMENT_HEADING, pattern: /^\*{0,2}AI补充分析\*{0,2}[:：]?\s*/ },
+    { heading: AI_SUPPLEMENT_HEADING, pattern: /^\*{0,2}AI分析\*{0,2}[:：]?\s*/ },
     { heading: NEXT_STEP_HEADING, pattern: /^\*{0,2}下一步建议\*{0,2}[:：]?\s*/ },
   ] as const;
 

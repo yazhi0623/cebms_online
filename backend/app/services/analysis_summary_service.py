@@ -99,42 +99,11 @@ class AnalysisSummaryService:
 
     @classmethod
     def build_summary_text(cls, records: list[Record], range_months: int = 0) -> str:
-        ordered = sorted(records, key=lambda item: item.created_at, reverse=True)
-        parsed = [cls.parse_content_fields(record.content) for record in ordered]
-        record_count = len(ordered)
-
-        scores: list[float] = []
-        for item in parsed:
-            raw = item.get("emotionScore", "").strip()
-            if not raw:
-                continue
-            try:
-                scores.append(float(raw))
-            except (TypeError, ValueError):
-                continue
-
-        average = f"{sum(scores) / len(scores):.1f}" if scores else "暂无"
-
-        def frequency(key: str) -> str:
-            counter: dict[str, int] = {}
-            for item in parsed:
-                value = item.get(key, "").strip()
-                if value:
-                    counter[value] = counter.get(value, 0) + 1
-            if not counter:
-                return "暂无明显集中项"
-            pairs = sorted(counter.items(), key=lambda pair: pair[1], reverse=True)[:3]
-            return "、".join(f"{value}({count})" for value, count in pairs)
-
+        record_count = len(records)
         return "\n".join(
             [
                 f"【分析范围】{cls.range_label(range_months)}",
                 f"本次纳入分析的记录数：{record_count} 条",
-                f"平均情绪分值：{average}",
-                f"高频问题：{frequency('problem')}",
-                f"高频改进方向：{frequency('improvement')}",
-                f"高频感恩内容：{frequency('gratitude')}",
-                "建议：优先对高频问题和高频改进方向建立一一对应的行动清单，下次记录时重点观察情绪分值是否随行动而变化。",
             ]
         )
 
