@@ -16,7 +16,7 @@ SOLUTION_LABEL = "解决方法"
 GRATITUDE_LABEL = "感恩"
 IMPROVEMENT_LABEL = "需要改进"
 OTHER_LABEL = "其他"
-AVG_TEXT = "平均情绪分值"
+RECORD_COUNT_TEXT = "本次纳入分析的记录数"
 
 
 def build_record_content(index: int) -> str:
@@ -64,7 +64,8 @@ def test_generate_analysis_does_not_append_to_record_and_updates_count(client: T
     analysis = generate_response.json()
     assert analysis["record_id"] == latest_record_id
     assert "【分析范围】前三个月" in analysis["content"]
-    assert AVG_TEXT in analysis["content"]
+    assert f"{RECORD_COUNT_TEXT}：2 条" in analysis["content"]
+    assert "平均情绪分值" not in analysis["content"]
 
     count_response = client.get("/api/v1/analyses/count/today", headers=auth_headers)
     assert count_response.status_code == 200
