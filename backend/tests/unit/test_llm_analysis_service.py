@@ -96,6 +96,7 @@ def test_switch_model_stops_at_last_qwen_index(tmp_path) -> None:
 
 def test_build_prompt_keeps_full_input_and_mentions_output_limit(monkeypatch) -> None:
     service = LLMAnalysisService("unused")
+    monkeypatch.setattr(settings, "ANALYSIS_MAX_LLM_OUTPUT_CHARS", 400)
     record = Record(
         user_id=1,
         title="长记录",
