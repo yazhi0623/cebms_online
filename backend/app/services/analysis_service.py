@@ -88,6 +88,8 @@ class AnalysisService:
         else:
             records = self._filter_records_by_range(records, payload.range_months)
 
+        records = sorted(records, key=lambda item: (item.created_at, item.id))
+
         if len(records) < settings.ANALYSIS_THRESHOLD:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -162,7 +164,7 @@ class AnalysisService:
         total_chunks = len(chunks)
 
         for index, chunk in enumerate(chunks, start=1):
-            chunk_label = f"{range_label}（第{index}/{total_chunks}组）"
+            chunk_label = self._build_chunk_label(range_label, chunk, index, total_chunks)
             chunk_summary = self._with_range_label(self._build_analysis_text(chunk, 0), chunk_label)
             user_profile_text = self._build_user_profile_text(current_user)
             chunk_content = self.llm_analysis_service.generate_analysis_text(chunk, chunk_label, user_profile_text)
@@ -264,7 +266,17 @@ class AnalysisService:
 
     @staticmethod
     def _chunk_records(records, batch_size: int) -> list[list]:
-        return [records[index : index + batch_size] for index in range(0, len(records), batch_size)]
+        ordered = sorted(records, key=lambda item: (item.created_at, item.id))
+        return [ordered[index : index + batch_size] for index in range(0, len(ordered), batch_size)]
+
+    @staticmethod
+    def _build_chunk_label(range_label: str, chunk, index: int, total_chunks: int) -> str:
+        if not chunk:
+            return f"{range_label}（第{index}/{total_chunks}段）"
+
+        start = chunk[0].created_at.strftime("%Y-%m-%d")
+        end = chunk[-1].created_at.strftime("%Y-%m-%d")
+        return f"{range_label}（第{index}/{total_chunks}段，{start} 至 {end}）"
 
     @staticmethod
     def _with_range_label(content: str, range_label: str) -> str:

@@ -80,6 +80,7 @@ export function useRecordWorkspace() {
   const selectAllRef = useRef<HTMLInputElement | null>(null);
   const templateMenuRef = useRef<HTMLDivElement | null>(null);
   const initialLoadingStartedAtRef = useRef(Date.now());
+  const pendingImportedTemplateRef = useRef<TemplateItem | null>(null);
 
   useEffect(() => {
     const notice = loadRecordImportNotice();
@@ -287,6 +288,13 @@ export function useRecordWorkspace() {
       return;
     }
 
+    const importedTemplate = pendingImportedTemplateRef.current;
+    if (importedTemplate) {
+      pendingImportedTemplateRef.current = null;
+      setEditorError(null);
+      return;
+    }
+
     setTitleDraft("");
     setContentDraft(defaultTemplate?.content ?? "");
     setRecordTemplateId(defaultTemplate?.id ?? null);
@@ -363,12 +371,12 @@ export function useRecordWorkspace() {
 
   function handleImportTemplateIntoEditor(template: TemplateItem) {
     // 导入模板并不请求后端，只是把已加载的模板内容写进编辑器草稿。
-    setEditorMode("record");
+    const appendedContent = contentDraft.trim() ? `${contentDraft}\n\n${template.content}` : template.content;
 
+    pendingImportedTemplateRef.current = template;
     setEditorMode("record");
     setSelectedRecordId(null);
-    setTitleDraft("");
-    setContentDraft(template.content);
+    setContentDraft(appendedContent);
     setRecordTemplateId(template.id);
     setEditorError(null);
     setTemplateTriggerLabel(template.isDefault ? `${template.title}（默认）` : template.title);

@@ -209,6 +209,55 @@ describe("RecordListPage", () => {
     expect(within(templateSidebar!).queryByText("请输入模板标题")).not.toBeInTheDocument();
   });
 
+  it("keeps the record title and appends template content when importing into the editor", async () => {
+    const user = userEvent.setup();
+
+    render(
+      <NavigationProvider>
+        <ConfirmProvider>
+          <RecordListPage />
+        </ConfirmProvider>
+      </NavigationProvider>,
+    );
+
+    await user.click(screen.getAllByRole("button", { name: "新增" })[0]);
+    await user.type(screen.getByPlaceholderText("请输入记录标题"), "我的记录标题");
+    const originalContent = (screen.getByPlaceholderText("自由记录当天的想法、事件、情绪和行为") as HTMLTextAreaElement).value;
+    await user.click(screen.getByRole("button", { name: "导入模板" }));
+    await user.click(screen.getByRole("option", { name: "夜间复盘模板" }));
+
+    await waitFor(() => {
+      expect(screen.getByPlaceholderText("请输入记录标题")).toHaveValue("我的记录标题");
+      expect(screen.getByPlaceholderText("自由记录当天的想法、事件、情绪和行为")).toHaveValue(
+        `${originalContent}\n\n今天最值得记录的事：\n情绪起伏：\n我的反应：\n可以调整的地方：\n明天的一件小任务：`,
+      );
+    });
+  });
+
+  it("opens confirm dialog when leaving after importing template content", async () => {
+    const user = userEvent.setup();
+
+    render(
+      <NavigationProvider>
+        <ConfirmProvider>
+          <RecordListPage />
+        </ConfirmProvider>
+      </NavigationProvider>,
+    );
+
+    await user.click(screen.getAllByRole("button", { name: "新增" })[0]);
+    await user.click(screen.getByRole("button", { name: "导入模板" }));
+    await user.click(screen.getByRole("option", { name: "夜间复盘模板" }));
+    await user.click(screen.getByRole("button", { name: "展开模板列表" }));
+    await user.click(screen.getAllByRole("button", { name: /夜间复盘模板/ })[1]);
+
+    const dialog = await screen.findByRole("dialog");
+    expect(dialog).toBeInTheDocument();
+    expect(within(dialog).getByText("是否放弃未保存的修改？")).toBeInTheDocument();
+    expect(within(dialog).getByRole("button", { name: "舍弃" })).toBeInTheDocument();
+    expect(within(dialog).getByRole("button", { name: "保存" })).toBeInTheDocument();
+  });
+
   it("shows pressed state immediately on pointer interaction", async () => {
     const user = userEvent.setup();
 
