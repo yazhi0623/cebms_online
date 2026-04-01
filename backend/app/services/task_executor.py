@@ -12,20 +12,57 @@ from openpyxl import load_workbook
 from sqlalchemy.orm import Session, sessionmaker
 
 from app.models.analysis import Analysis
+from app.models.user import User
 from app.models.record import Record
 from app.models.template import Template
 from app.repositories.analysis_repository import AnalysisRepository
+from app.repositories.analysis_task_repository import AnalysisTaskRepository
 from app.repositories.backup_snapshot_repository import BackupSnapshotRepository
 from app.repositories.export_task_repository import ExportTaskRepository
 from app.repositories.import_task_repository import ImportTaskRepository
 from app.repositories.record_repository import RecordRepository
 from app.repositories.template_repository import TemplateRepository
+from app.schemas.analysis import AnalysisGenerateRequest
+from app.services.analysis_service import AnalysisService
 from app.services.export_formatting import (
     build_display_json_bytes,
     build_display_markdown,
     build_display_txt,
     build_display_xlsx_bytes,
 )
+
+
+def run_analysis_task(session_factory: sessionmaker[Session], task_id: int) -> None:
+    """执行分析后台任务，并把最终状态写回任务表。"""
+    db = session_factory()
+    task = None
+    try:
+        task_repo = AnalysisTaskRepository(db)
+        task = task_repo.get_by_id(task_id)
+        if task is None:
+            return
+
+        task_repo.mark_running(task)
+        analysis_service = AnalysisService(AnalysisRepository(db), TemplateRepository(db))
+        current_user = db.get(User, task.user_id)
+        result = analysis_service.generate_analysis(
+            task.user_id,
+            AnalysisGenerateRequest(
+                record_id=task.record_id,
+                template_id=task.template_id,
+                range_months=task.range_months,
+            ),
+            current_user,
+        )
+        task_repo.mark_success(task, result.id)
+    except Exception as exc:
+        if task is not None:
+            error_message = getattr(exc, "detail", None)
+            if not isinstance(error_message, str):
+                error_message = str(exc)
+            AnalysisTaskRepository(db).mark_failed(task, error_message or "Analysis task failed")
+    finally:
+        db.close()
 
 
 def run_import_task(session_factory: sessionmaker[Session], task_id: int, file_bytes: bytes | None = None) -> None:

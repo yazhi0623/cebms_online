@@ -5,11 +5,12 @@ import type { AnalysisAggregate, AnalysisItem, TodayAnalysisCount } from "../../
 import type { RecordItem } from "../../entities/record/types";
 import type { TemplateItem } from "../../entities/template/types";
 import {
+  createAnalysisTask,
   deleteAnalysis,
+  fetchAnalysisTask,
   fetchAnalyses,
   fetchAnalysisAggregate,
   fetchTodayAnalysisCount,
-  generateAnalysis,
 } from "../../features/analysis/api";
 import { fetchRecords } from "../../features/record/api";
 import { fetchTemplates } from "../../features/template/api";
@@ -184,6 +185,12 @@ function normalizeGenerateErrorMessage(message: string): string {
   }
 
   return message || "生成失败";
+}
+
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => {
+    window.setTimeout(resolve, ms);
+  });
 }
 
 export function AnalysisPage() {
@@ -498,7 +505,22 @@ export function AnalysisPage() {
     }
     setGenerating(true);
     try {
-      await generateAnalysis(session.accessToken, options);
+      const task = await createAnalysisTask(session.accessToken, options);
+      const startedAt = Date.now();
+      let currentTask = task;
+
+      while (currentTask.status === "pending" || currentTask.status === "running") {
+        if (Date.now() - startedAt > 5 * 60 * 1000) {
+          throw new Error("分析任务超时，请稍后刷新页面查看结果");
+        }
+        await delay(1000);
+        currentTask = await fetchAnalysisTask(session.accessToken, task.id);
+      }
+
+      if (currentTask.status === "failed") {
+        throw new Error(currentTask.errorMessage || "生成失败");
+      }
+
       const snapshot = await loadAnalysisData();
       if (snapshot.todayCount && !snapshot.todayCount.llmEnabled) {
         setPageNotice(ANALYSIS_SAMPLE_NOTICE);

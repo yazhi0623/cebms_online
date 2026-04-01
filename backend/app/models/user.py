@@ -37,4 +37,5 @@ class User(Base):
     import_tasks = relationship("ImportTask", back_populates="user", cascade="all, delete-orphan")
     export_tasks = relationship("ExportTask", back_populates="user", cascade="all, delete-orphan")
     backup_snapshots = relationship("BackupSnapshot", back_populates="user", cascade="all, delete-orphan")
+    analysis_tasks = relationship("AnalysisTask", back_populates="user", cascade="all, delete-orphan")
     audit_logs = relationship("AuditLog", back_populates="user")

@@ -28,3 +28,17 @@ export type TodayAnalysisCount = {
   threshold: number;
   llmEnabled: boolean;
 };
+
+export type AnalysisTaskItem = {
+  id: number;
+  userId: number;
+  recordId: number | null;
+  templateId: number | null;
+  rangeMonths: number;
+  status: "pending" | "running" | "success" | "failed";
+  resultAnalysisId: number | null;
+  errorMessage: string | null;
+  createdAt: string;
+  updatedAt: string;
+  finishedAt: string | null;
+};

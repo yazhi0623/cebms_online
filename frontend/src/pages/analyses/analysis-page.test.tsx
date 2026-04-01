@@ -59,7 +59,8 @@ vi.mock("../../features/analysis/api", () => ({
     threshold: 10,
     llmEnabled: false,
   }),
-  generateAnalysis: vi.fn(),
+  createAnalysisTask: vi.fn(),
+  fetchAnalysisTask: vi.fn(),
   deleteAnalysis: vi.fn(),
 }));
 
