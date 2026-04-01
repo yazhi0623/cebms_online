@@ -8,7 +8,6 @@ from app.core.config import settings
 from app.schemas.analysis import AnalysisCreate, AnalysisGenerateRequest
 from app.services.analysis_service import AnalysisService
 from app.services.analysis_summary_service import AnalysisSummaryService
-from app.services.weather_service import WeatherSnapshot
 
 
 class StubLLMAnalysisService:
@@ -369,42 +368,3 @@ def test_generate_analysis_filters_records_by_template_and_persists_template_id(
     assert "【分析范围】模板：晨间复盘" in result.content
     assert [record.id for record in llm_service.calls[0]["records"]] == [1, 2]
     assert llm_service.calls[0]["range_label"] == "模板：晨间复盘"
-
-
-def test_generate_analysis_appends_rest_guidance_for_crisis_records(monkeypatch) -> None:
-    repository = StubAnalysisRepository()
-    current_time = datetime.now(UTC)
-    repository.records = [
-        make_record(1, 1, "其他：还行", current_time),
-        make_record(2, 1, "其他：好烦，不想动", current_time + timedelta(minutes=1)),
-    ]
-    llm_service = StubLLMAnalysisService("【分析范围】全部\n总体趋势：今天波动较大。")
-    service = AnalysisService(repository, StubTemplateRepository(), llm_service)
-    monkeypatch.setattr(settings, "ANALYSIS_THRESHOLD", 2)
-    monkeypatch.setattr(service.weather_service, "get_current_snapshot", lambda: None)
-
-    result = service.generate_analysis(1, AnalysisGenerateRequest(record_id=None, range_months=0))
-
-    assert "请先休息" in result.content
-    assert "喝水" in result.content
-
-
-def test_generate_analysis_appends_sunlight_guidance_when_weather_matches(monkeypatch) -> None:
-    repository = StubAnalysisRepository()
-    current_time = datetime.now(UTC)
-    repository.records = [
-        make_record(1, 1, "其他：还行", current_time),
-        make_record(2, 1, "其他：好烦", current_time + timedelta(minutes=1)),
-    ]
-    llm_service = StubLLMAnalysisService("【分析范围】全部\n总体趋势：今天波动较大。")
-    service = AnalysisService(repository, StubTemplateRepository(), llm_service)
-    monkeypatch.setattr(settings, "ANALYSIS_THRESHOLD", 2)
-    monkeypatch.setattr(
-        service.weather_service,
-        "get_current_snapshot",
-        lambda: WeatherSnapshot(location_label="上海", is_sunny=True, is_daylight=True, weather_code=0),
-    )
-
-    result = service.generate_analysis(1, AnalysisGenerateRequest(record_id=None, range_months=0))
-
-    assert "晒晒太阳" in result.content

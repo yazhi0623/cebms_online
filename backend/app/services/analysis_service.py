@@ -138,7 +138,6 @@ class AnalysisService:
         else:
             content = self._normalize_analysis_content(content, range_label)
             content = self._merge_summary_with_llm_content(summary_content, content)
-        content = self._append_required_emotional_guidance(content, records)
         analysis_in = AnalysisCreate(
             record_id=record_id,
             template_id=template_id,
@@ -173,8 +172,6 @@ class AnalysisService:
             else:
                 chunk_content = self._normalize_analysis_content(chunk_content, chunk_label)
                 chunk_content = self._merge_summary_with_llm_content(chunk_summary, chunk_content)
-            chunk_content = self._append_required_emotional_guidance(chunk_content, chunk)
-
             chunk_analysis = self._create_analysis_unchecked(
                 user_id,
                 AnalysisCreate(
@@ -199,8 +196,6 @@ class AnalysisService:
         else:
             final_content = self._normalize_analysis_content(final_content, final_label)
             final_content = self._merge_summary_with_llm_content(final_summary, final_content)
-        final_content = self._append_required_emotional_guidance(final_content, records)
-
         return self._create_analysis_unchecked(
             user_id,
             AnalysisCreate(
@@ -313,20 +308,6 @@ class AnalysisService:
         merged_lines = [summary_lines[0], *summary_lines[1:], "", "AI分析：", *llm_lines[1:]]
         return "\n".join(line for line in merged_lines if line is not None).strip()
 
-    def _append_required_emotional_guidance(self, content: str, records) -> str:
-        guidance_lines = self._build_required_emotional_guidance(records)
-        if not guidance_lines:
-            return content
-
-        missing_lines = [line for line in guidance_lines if line not in content]
-        if not missing_lines:
-            return content
-
-        if "下一步建议：" in content:
-            return f"{content}\n" + "\n".join(missing_lines)
-
-        return f"{content}\n\n下一步建议：\n" + "\n".join(missing_lines)
-
     @staticmethod
     def _build_user_profile_text(current_user: User | None) -> str | None:
         if current_user is None:
@@ -348,37 +329,3 @@ class AnalysisService:
             "\u8bf7\u5728\u5206\u6790\u548c\u5efa\u8bae\u91cc\u53c2\u8003\u8fd9\u4e9b\u80cc\u666f\u4fe1\u606f\uff0c\u4f46\u4e0d\u8981\u523b\u677f\u5370\u8c61\u6216\u8fc7\u5ea6\u63a8\u65ad\u3002"
         )
         return "\n".join(lines)
-
-    def _build_required_emotional_guidance(self, records) -> list[str]:
-        if not records:
-            return []
-
-        today = date.today()
-        ordered = sorted(records, key=lambda item: (item.created_at, item.id))
-        today_records = [record for record in ordered if record.created_at.date() == today]
-        latest_record = ordered[-1]
-        today_scores = [
-            score
-            for score in (AnalysisSummaryService._extract_emotion_score(record.content) for record in today_records)
-            if score is not None
-        ]
-        latest_score = AnalysisSummaryService._extract_emotion_score(latest_record.content)
-        latest_has_crisis_keywords = AnalysisSummaryService._contains_crisis_keywords(latest_record.content)
-        is_crisis = bool(today_scores and min(today_scores) <= 2) or latest_has_crisis_keywords
-        is_low_energy = not is_crisis and latest_score is not None and 3 <= latest_score <= 6
-        has_two_week_low_streak = AnalysisSummaryService._has_two_week_low_mood_streak(records, today)
-
-        guidance_lines: list[str] = []
-        if is_crisis:
-            guidance_lines.append("请先休息，今天先只保留吃饭、喝水、洗漱和睡觉这些最基本的事。")
-            weather_snapshot = self.weather_service.get_current_snapshot()
-            if weather_snapshot and weather_snapshot.is_sunny and weather_snapshot.is_daylight:
-                guidance_lines.append("如果现在天气晴好且还没日落，可以去阳光下待10到15分钟，只是晒晒太阳就可以。")
-        elif is_low_energy:
-            guidance_lines.append("先不要给自己安排太多任务，今天只保留一件最重要的小事，完成就可以。")
-            guidance_lines.append("最小一步可以只是坐起来、喝一口水，或者把要做的事写成一行。")
-
-        if has_two_week_low_streak:
-            guidance_lines.append("如果这种低落状态已经连续两周都没有缓解，建议尽快线下就医，或联系专业心理咨询/精神科帮助。")
-
-        return guidance_lines
