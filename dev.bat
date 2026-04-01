@@ -7,6 +7,7 @@ set PROJECT_DIR=%PROJECT_DIR:~0,-1%
 set BACKEND_DIR=%PROJECT_DIR%\backend
 set FRONTEND_DIR=%PROJECT_DIR%\frontend
 set POSTGRES_CONTAINER=cebms-postgres
+set DEV_IP=
 
 if "%~1"=="" goto help
 if /I "%~1"=="start" goto start
@@ -38,12 +39,24 @@ if errorlevel 1 (
 echo.
 echo ===== 启动 Backend =====
 cd /d "%BACKEND_DIR%"
-start "CEBMS Backend" cmd /k "uvicorn app.main:app --reload"
+start "CEBMS Backend" cmd /k "uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
 
 echo.
 echo ===== 启动 Frontend =====
 cd /d "%FRONTEND_DIR%"
-start "CEBMS Frontend" cmd /k "npm run dev"
+for /f "usebackq delims=" %%i in (`powershell -NoProfile -Command "$ip = Get-NetIPAddress -AddressFamily IPv4 -ErrorAction SilentlyContinue ^| Where-Object { $_.IPAddress -notmatch '^(127\\.|169\\.254\\.)' -and $_.PrefixOrigin -ne 'WellKnown' } ^| Sort-Object InterfaceMetric, SkipAsSource ^| Select-Object -First 1 -ExpandProperty IPAddress; if ($ip) { $ip }"`) do (
+    set DEV_IP=%%i
+    goto ip_found
+)
+
+:ip_found
+if defined DEV_IP (
+    echo Frontend HMR Host: %DEV_IP%
+    start "CEBMS Frontend" cmd /k "set VITE_DEV_HMR_HOST=%DEV_IP% && npm run dev -- --host 0.0.0.0"
+) else (
+    echo Frontend HMR Host: not found, start without VITE_DEV_HMR_HOST
+    start "CEBMS Frontend" cmd /k "npm run dev -- --host 0.0.0.0"
+)
 
 echo.
 echo ===== 全部启动完成 =====

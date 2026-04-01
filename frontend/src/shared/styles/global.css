@@ -124,6 +124,22 @@ textarea {
   color: #8e6448;
 }
 
+.shell__user-link {
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.shell__user-link:hover,
+.shell__user-link:focus-visible {
+  color: #684933;
+  outline: none;
+}
+
 .shell__nav-button {
   border: 1px solid rgba(104, 73, 51, 0.2);
   background: rgba(255, 251, 246, 0.72);
@@ -174,8 +190,9 @@ textarea {
   flex-direction: column;
   flex: 1 1 auto;
   min-height: 0;
+  position: relative;
   overflow: auto;
-  padding-right: 6px;
+  padding-right: 0;
 }
 
 .shell__content--records {
@@ -192,18 +209,18 @@ textarea {
   padding-right: 0;
 }
 
-.shell__content > :not(.auth-modal-overlay) {
+.shell__content > :not(.auth-modal-overlay):not(.profile-modal-overlay) {
   flex: 1 1 auto;
   min-height: 0;
 }
 
-.shell__content--records > :not(.auth-modal-overlay) {
+.shell__content--records > :not(.auth-modal-overlay):not(.profile-modal-overlay) {
   flex: 1 1 auto;
   min-height: 0;
   height: auto;
 }
 
-.shell__content--data-center > :not(.auth-modal-overlay) {
+.shell__content--data-center > :not(.auth-modal-overlay):not(.profile-modal-overlay) {
   flex: 1 1 auto;
   min-height: 0;
   height: auto;
@@ -356,6 +373,7 @@ textarea {
   position: relative;
   min-height: 100%;
   height: 100%;
+  width: 100%;
   display: grid;
   grid-template-rows: minmax(0, 1fr);
   gap: 8px;
@@ -783,6 +801,7 @@ textarea {
 /* 数据中心页的卡片、任务列表和操作区域。 */
 .data-center-layout {
   min-height: 100%;
+  width: 100%;
   display: grid;
   grid-template-rows: auto auto auto;
   gap: 16px;
@@ -911,7 +930,7 @@ textarea {
   display: grid;
   grid-template-columns: 320px minmax(0, 1fr) 0;
   grid-template-rows: minmax(0, 1fr);
-  gap: 10px;
+  gap: 0;
   align-items: stretch;
   align-content: stretch;
   overflow: hidden;
@@ -1227,6 +1246,7 @@ textarea {
 
 .record-editor-shell {
   grid-column: 2 / 3;
+  margin-left: 10px;
   padding: 18px;
   display: grid;
   grid-template-rows: minmax(0, 1fr);
@@ -1608,6 +1628,7 @@ textarea {
   grid-template-columns: minmax(0, 1fr);
   min-height: 0;
   width: 100%;
+  margin-left: 10px;
   padding: 0;
   border: 0;
   background: transparent;
@@ -1814,6 +1835,159 @@ textarea {
   backdrop-filter: blur(3px);
   z-index: 110;
   padding: 20px;
+}
+
+.profile-modal-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 111;
+  display: grid;
+  justify-items: end;
+  align-items: stretch;
+  padding: 0;
+  background: transparent;
+  pointer-events: none;
+}
+
+.profile-modal-card {
+  position: relative;
+  width: min(320px, 100%);
+  height: 100%;
+  min-height: 0;
+  padding: 14px 18px 16px;
+  border: 1px solid rgba(104, 73, 51, 0.32);
+  border-radius: 28px;
+  background: linear-gradient(180deg, rgba(255, 251, 246, 0.98), rgba(244, 236, 226, 0.98));
+  box-shadow: 0 24px 60px rgba(62, 47, 36, 0.18);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  pointer-events: auto;
+  overflow: hidden;
+}
+
+.profile-modal-card__close {
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  border: 0;
+  background: transparent;
+  color: #8e6448;
+  font-size: 28px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+}
+
+.profile-modal-card__title {
+  margin: 0;
+  text-align: center;
+  font-size: clamp(20px, 2.6vw, 30px);
+  line-height: 1.1;
+  color: #3f3026;
+}
+
+.profile-modal-card__hint {
+  margin: -4px 0 0;
+  text-align: center;
+  font-size: 13px;
+  line-height: 1.4;
+  color: #7f604d;
+}
+
+.profile-modal-card__row {
+  display: grid;
+  grid-template-columns: 72px minmax(0, 1fr);
+  align-items: center;
+  gap: 14px;
+}
+
+.profile-modal-card__row span {
+  font-size: 15px;
+  color: #3f3026;
+}
+
+.profile-modal-card__row input {
+  width: 100%;
+  min-height: 42px;
+  padding: 6px 12px;
+  border: 1px solid rgba(104, 73, 51, 0.28);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.9);
+  color: #3f3026;
+  font-size: 14px;
+}
+
+.profile-modal-card__row input:disabled,
+.profile-modal-card__row input[readonly] {
+  background: rgba(232, 225, 216, 0.72);
+  color: rgba(63, 48, 38, 0.68);
+  cursor: not-allowed;
+}
+
+.profile-modal-dropdown {
+  width: 100%;
+}
+
+.profile-modal-dropdown .dropdown-action__trigger {
+  width: 100%;
+  min-width: 0;
+  height: 42px;
+  border-radius: 14px;
+  padding: 0 12px;
+  border: 1px solid rgba(104, 73, 51, 0.28);
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: none;
+}
+
+.profile-modal-dropdown .dropdown-action__label {
+  width: auto;
+  text-align: left;
+  font-size: 14px;
+  font-weight: 400;
+  color: #3f3026;
+}
+
+.profile-modal-dropdown .dropdown-action__caret {
+  position: static;
+  right: auto;
+}
+
+.profile-modal-dropdown .dropdown-action__menu {
+  left: 0;
+  right: auto;
+  width: 100%;
+  min-width: 100%;
+  border-radius: 14px;
+  padding: 4px;
+}
+
+.profile-modal-dropdown .dropdown-action__option {
+  min-height: 36px;
+  border-radius: 12px;
+  padding: 7px 10px;
+  font-size: 14px;
+}
+
+
+.profile-modal-card__error {
+  margin: -4px 0 0;
+  font-size: 12px;
+  color: #b44528;
+  text-align: center;
+}
+
+.profile-modal-card__actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: auto;
+  padding-top: 6px;
+}
+
+.profile-modal-card__actions .shell__nav-button {
+  min-width: 96px;
+  padding: 8px 14px;
+  font-size: 14px;
 }
 
 .auth-tab {
@@ -2863,6 +3037,7 @@ textarea {
   }
 
   .record-workspace__compact-panel .template-sidebar-shell {
+    margin-left: 0;
     width: auto;
     padding: 0;
     height: auto;
@@ -2901,6 +3076,7 @@ textarea {
   .record-workspace--compact .record-editor-shell {
     grid-column: auto;
     grid-row: 2 / 4;
+    margin-left: 0;
     min-height: 0;
     height: 100%;
     overflow: hidden;
@@ -3084,6 +3260,7 @@ textarea {
 
 @media (max-width: 900px) {
   .template-sidebar-shell {
+    margin-left: 0;
     width: auto;
     padding: 0;
     height: auto;

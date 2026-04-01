@@ -7,6 +7,7 @@ import {
   logout as logoutRequest,
   refreshSession,
   register as registerRequest,
+  updateCurrentUserProfile,
 } from "../../features/auth/api";
 import { type ApiSession, checkHealth } from "../../shared/api/client";
 import { applyUiTimingConfig } from "../../shared/constants/ui";
@@ -21,6 +22,14 @@ type AuthContextValue = {
   login: (username: string, password: string) => Promise<void>;
   register: (username: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
+  updateProfile?: (profile: {
+    username: string;
+    gender: string;
+    age: string;
+    city: string;
+    phone: string;
+    email: string;
+  }) => Promise<void>;
 };
 
 export const AuthContext = createContext<AuthContextValue | null>(null);
@@ -36,7 +45,6 @@ export function AuthProvider({ children }: PropsWithChildren) {
     let active = true;
 
     async function bootstrap() {
-      // 应用启动时统一恢复登录态，避免每个页面各自做一遍会话初始化。
       setLoading(true);
 
       try {
@@ -45,7 +53,6 @@ export function AuthProvider({ children }: PropsWithChildren) {
           return;
         }
 
-        // 当前后端会返回一部分 UI 时序配置，例如 toast 时长。
         applyUiTimingConfig({ toastDurationMs: healthStatus.toast_duration_ms });
         setBackendReady(true);
         setAuthRegistrationEnabled(Boolean(healthStatus.auth_registration_enabled));
@@ -53,7 +60,6 @@ export function AuthProvider({ children }: PropsWithChildren) {
         const storedSession = loadStoredSession();
 
         if (!storedSession?.accessToken) {
-          // 没有本地令牌时，直接进入游客态。
           setSession(null);
           setCurrentUser(null);
           return;
@@ -65,7 +71,6 @@ export function AuthProvider({ children }: PropsWithChildren) {
         try {
           user = await fetchCurrentUser(storedSession.accessToken);
         } catch {
-          // access token 失效时，尝试用 refresh token 静默恢复会话。
           if (!storedSession.refreshToken) {
             throw new Error("Session refresh unavailable");
           }
@@ -113,7 +118,6 @@ export function AuthProvider({ children }: PropsWithChildren) {
       loading,
       async register(username: string, password: string) {
         await registerRequest({ username, password });
-        // 注册成功后立刻登录，前端可以直接进入工作台而不需要再次输入密码。
         const nextSession = await loginRequest({ username, password });
         saveStoredSession(nextSession);
         setSession(nextSession);
@@ -134,12 +138,28 @@ export function AuthProvider({ children }: PropsWithChildren) {
           try {
             await logoutRequest(session.accessToken);
           } catch {
-            // 退出本质上是本地清理令牌。即便后端返回失败，也不应该阻止前端退出。
+            // ignore logout API failure and still clear local session
           }
         }
         saveStoredSession(null);
         setSession(null);
         setCurrentUser(null);
+      },
+      async updateProfile(profile) {
+        if (!session?.accessToken) {
+          throw new Error("Session unavailable");
+        }
+        const result = await updateCurrentUserProfile(session.accessToken, {
+          username: profile.username.trim(),
+          gender: profile.gender.trim() || null,
+          age: profile.age.trim() ? Number(profile.age.trim()) : null,
+          city: profile.city.trim() || null,
+          phone: profile.phone.trim() || null,
+          email: profile.email.trim() || null,
+        });
+        saveStoredSession(result.session);
+        setSession(result.session);
+        setCurrentUser(result.user);
       },
     }),
     [authRegistrationEnabled, backendReady, currentUser, loading, session],

@@ -25,7 +25,12 @@ class LLMAnalysisService:
         self.models_path = Path(models_path or settings.ANALYSIS_MODELS_PATH)
         self.weather_service = WeatherService()
 
-    def generate_analysis_text(self, records: list[Record], range_label: str) -> str | None:
+    def generate_analysis_text(
+        self,
+        records: list[Record],
+        range_label: str,
+        user_profile_text: str | None = None,
+    ) -> str | None:
         if not settings.ANALYSIS_LLM_ENABLED:
             return None
 
@@ -35,10 +40,15 @@ class LLMAnalysisService:
             return None
 
         weather_snapshot = self.weather_service.get_current_snapshot()
-        prompt = self._build_prompt(records, range_label, weather_snapshot)
+        prompt = self._build_prompt(records, range_label, weather_snapshot, user_profile_text)
         return self._run_prompt(prompt, payload)
 
-    def generate_summary_text(self, analysis_texts: list[str], range_label: str) -> str | None:
+    def generate_summary_text(
+        self,
+        analysis_texts: list[str],
+        range_label: str,
+        user_profile_text: str | None = None,
+    ) -> str | None:
         if not settings.ANALYSIS_LLM_ENABLED:
             return None
 
@@ -47,7 +57,7 @@ class LLMAnalysisService:
         if not models:
             return None
 
-        prompt = self._build_summary_prompt(analysis_texts, range_label)
+        prompt = self._build_summary_prompt(analysis_texts, range_label, user_profile_text)
         return self._run_prompt(prompt, payload)
 
     def _run_prompt(self, prompt: str, payload: dict[str, Any]) -> str | None:
@@ -80,9 +90,12 @@ class LLMAnalysisService:
                     {
                         "role": "system",
                         "content": (
-                            "你是专业、克制、温和的中文心理记录分析助手。"
-                            "只基于提供的记录做总结，不虚构事实，不做诊断。"
-                            "输出内容要温和、具体、可执行，禁止输出伤害用户或他人的内容。"
+                            "\u4f60\u662f\u4e13\u4e1a\u3001\u514b\u5236\u3001\u6e29\u548c\u7684\u4e2d\u6587"
+                            "\u5fc3\u7406\u8bb0\u5f55\u5206\u6790\u52a9\u624b\u3002"
+                            "\u53ea\u57fa\u4e8e\u63d0\u4f9b\u7684\u8bb0\u5f55\u505a\u603b\u7ed3\uff0c"
+                            "\u4e0d\u865a\u6784\u4e8b\u5b9e\uff0c\u4e0d\u505a\u8bca\u65ad\u3002"
+                            "\u8f93\u51fa\u5185\u5bb9\u8981\u6e29\u548c\u3001\u5177\u4f53\u3001\u53ef\u6267\u884c\uff0c"
+                            "\u7981\u6b62\u8f93\u51fa\u4f24\u5bb3\u7528\u6237\u6216\u4ed6\u4eba\u7684\u5185\u5bb9\u3002"
                         ),
                     },
                     {"role": "user", "content": prompt},
@@ -146,71 +159,200 @@ class LLMAnalysisService:
         return isinstance(status_code, int) and 400 <= status_code < 500
 
     @staticmethod
-    def _build_prompt(records: list[Record], range_label: str, weather_snapshot=None) -> str:
+    def _build_user_profile_context(user_profile_text: str | None) -> str:
+        if not user_profile_text:
+            return ""
+
+        return "\n".join(
+            [
+                "\u3010\u7528\u6237\u8d44\u6599\u53c2\u8003\u3011",
+                user_profile_text.strip(),
+                (
+                    "\u4ee5\u4e0a\u4fe1\u606f\u53ea\u80fd\u4f5c\u4e3a\u8f85\u52a9\u7406\u89e3\u7528\u6237"
+                    "\u5904\u5883\u7684\u53c2\u8003\u80cc\u666f\uff0c\u53ef\u4ee5\u7528\u6765\u8ba9\u5206\u6790"
+                    "\u7ed3\u679c\u548c\u5efa\u8bae\u66f4\u8d34\u8fd1\u7528\u6237\u7684\u5b9e\u9645\u60c5\u51b5\uff0c"
+                    "\u4f46\u4e0d\u8981\u56e0\u6027\u522b\u3001\u5e74\u9f84\u6216\u57ce\u5e02\u505a\u523b\u677f"
+                    "\u5370\u8c61\u63a8\u65ad\uff0c\u4e5f\u4e0d\u8981\u8d4b\u4e88\u8bb0\u5f55\u4e2d\u6ca1\u6709"
+                    "\u7684\u4e8b\u5b9e\u3002"
+                ),
+            ]
+        )
+
+    @staticmethod
+    def _build_prompt(
+        records: list[Record],
+        range_label: str,
+        weather_snapshot=None,
+        user_profile_text: str | None = None,
+    ) -> str:
         ordered = sorted(records, key=lambda item: item.created_at)
         record_blocks = []
         for index, record in enumerate(ordered, start=1):
             record_blocks.append(
                 "\n".join(
                     [
-                        f"记录{index}",
-                        f"时间：{record.created_at.strftime('%Y-%m-%d %H:%M:%S')}",
-                        f"标题：{record.title or '未命名'}",
-                        f"内容：{record.content or ''}",
+                        f"\u8bb0\u5f55{index}",
+                        f"\u65f6\u95f4\uff1a{record.created_at.strftime('%Y-%m-%d %H:%M:%S')}",
+                        f"\u6807\u9898\uff1a{record.title or '\u672a\u547d\u540d'}",
+                        f"\u5185\u5bb9\uff1a{record.content or ''}",
                     ]
                 )
             )
 
         emotion_context = AnalysisSummaryService.build_emotional_context_text(ordered, weather_snapshot)
-
-        return "\n\n".join(
+        user_profile_context = LLMAnalysisService._build_user_profile_context(user_profile_text)
+        sections = [
+            f"\u5206\u6790\u8303\u56f4\uff1a{range_label}",
+            f"\u8bb0\u5f55\u6570\u91cf\uff1a{len(ordered)}",
+            (
+                "\u8bf7\u57fa\u4e8e\u4e0b\u9762\u8fd9\u4e9b\u8ba4\u77e5-\u60c5\u7eea-\u884c\u4e3a"
+                "\u8bb0\u5f55\uff0c\u8f93\u51fa\u4e00\u4efd\u4e2d\u6587\u5206\u6790\u7ed3\u679c\u3002"
+            ),
+            (
+                "\u8bb0\u5f55\u6570\u636e\u5df2\u7ecf\u6309\u65f6\u95f4\u4ece\u65e9\u5230\u665a\u6392\u5217\uff0c"
+                "\u8bf7\u7ed3\u5408\u6bcf\u6761\u8bb0\u5f55\u7684\u65f6\u95f4\u548c\u5185\u5bb9\uff0c"
+                "\u5206\u6790\u7528\u6237\u72b6\u6001\u968f\u7740\u65f6\u95f4\u6d41\u901d\u7684\u53d8\u5316\u3002"
+            ),
+        ]
+        if user_profile_context:
+            sections.append(user_profile_context)
+        sections.extend(
             [
-                f"分析范围：{range_label}",
-                f"记录数量：{len(ordered)}",
-                "请基于下面这些认知-情绪-行为记录，输出一份中文分析结果。",
-                "记录数据已经按时间从早到晚排列，请结合每条记录的时间和内容，分析用户状态随着时间流逝的变化。",
                 emotion_context,
-                "输出要求：",
-                "1. 第一行必须是【分析范围】加时间范围。",
-                "2. 后续按以下标题输出：总体趋势、状态变化、比较严重的问题或高频问题、主要触发因素、已出现的有效应对、下一步建议。",
-                f"3. 第一行之后的正文总长度控制在{settings.ANALYSIS_MAX_LLM_OUTPUT_CHARS}字以内，但不要为了压缩字数省略关键事实、重要问题或必要建议。",
-                "4. 记录数会由系统单独展示，你不要重复统计平均分、记录数、高频改进方向、高频感恩等结构化统计项。",
-                "5. 请优先指出比较严重的问题；只有当某类问题、触发因素或负向模式在不少于三分之一的记录中出现时，才能明确称为高频。",
-                "6. 如果没有达到三分之一，不要硬说高频，可以表述为偶发、若干次出现或局部出现。",
-                "7. 不要输出 markdown 列表符号，不要编造记录里没有的信息。",
-                "8. 下一步建议要简单易上手并且实用能够解决现在的问题。",
-                "9. 不要输出 markdown 格式文档。",
+                "\u8f93\u51fa\u8981\u6c42\uff1a",
+                "1. \u7b2c\u4e00\u884c\u5fc5\u987b\u662f\u3010\u5206\u6790\u8303\u56f4\u3011\u52a0\u65f6\u95f4\u8303\u56f4\u3002",
+                (
+                    "2. \u540e\u7eed\u6309\u4ee5\u4e0b\u6807\u9898\u8f93\u51fa\uff1a\u603b\u4f53\u8d8b\u52bf\u3001"
+                    "\u72b6\u6001\u53d8\u5316\u3001\u6bd4\u8f83\u4e25\u91cd\u7684\u95ee\u9898\u6216"
+                    "\u9ad8\u9891\u95ee\u9898\u3001\u4e3b\u8981\u89e6\u53d1\u56e0\u7d20\u3001"
+                    "\u5df2\u51fa\u73b0\u7684\u6709\u6548\u5e94\u5bf9\u3001\u4e0b\u4e00\u6b65\u5efa\u8bae\u3002"
+                ),
+                (
+                    f"3. \u7b2c\u4e00\u884c\u4e4b\u540e\u7684\u6b63\u6587\u603b\u957f\u5ea6\u63a7\u5236\u5728"
+                    f"{settings.ANALYSIS_MAX_LLM_OUTPUT_CHARS}\u5b57\u4ee5\u5185\uff0c"
+                    "\u4f46\u4e0d\u8981\u4e3a\u4e86\u538b\u7f29\u5b57\u6570\u7701\u7565\u5173\u952e\u4e8b\u5b9e\u3001"
+                    "\u91cd\u8981\u95ee\u9898\u6216\u5fc5\u8981\u5efa\u8bae\u3002"
+                ),
+                (
+                    "4. \u8bb0\u5f55\u6570\u4f1a\u7531\u7cfb\u7edf\u5355\u72ec\u5c55\u793a\uff0c"
+                    "\u4f60\u4e0d\u8981\u91cd\u590d\u7edf\u8ba1\u5e73\u5747\u5206\u3001\u8bb0\u5f55\u6570\u3001"
+                    "\u9ad8\u9891\u6539\u8fdb\u65b9\u5411\u3001\u9ad8\u9891\u611f\u6069\u7b49\u7ed3\u6784\u5316\u7edf\u8ba1\u9879\u3002"
+                ),
+                (
+                    "5. \u5982\u679c\u63d0\u4f9b\u4e86\u7528\u6237\u6027\u522b\u3001\u5e74\u9f84\u6216\u57ce\u5e02\uff0c"
+                    "\u53ef\u4ee5\u9002\u5ea6\u7eb3\u5165\u5206\u6790\uff0c\u8ba9\u5206\u6790\u7ed3\u679c\u548c"
+                    "\u5efa\u8bae\u66f4\u8d34\u8fd1\u7528\u6237\u5904\u5883\uff0c\u4f46\u4e0d\u8981\u8fdb\u884c"
+                    "\u523b\u677f\u5316\u63a8\u65ad\u3002"
+                ),
+                (
+                    "6. \u8bf7\u4f18\u5148\u6307\u51fa\u6bd4\u8f83\u4e25\u91cd\u7684\u95ee\u9898\uff1b"
+                    "\u53ea\u6709\u5f53\u67d0\u7c7b\u95ee\u9898\u3001\u89e6\u53d1\u56e0\u7d20\u6216"
+                    "\u8d1f\u5411\u6a21\u5f0f\u5728\u4e0d\u5c11\u4e8e\u4e09\u5206\u4e4b\u4e00\u7684"
+                    "\u8bb0\u5f55\u4e2d\u51fa\u73b0\u65f6\uff0c\u624d\u80fd\u660e\u786e\u79f0\u4e3a\u9ad8\u9891\u3002"
+                ),
+                (
+                    "7. \u5982\u679c\u6ca1\u6709\u8fbe\u5230\u4e09\u5206\u4e4b\u4e00\uff0c"
+                    "\u4e0d\u8981\u786c\u8bf4\u9ad8\u9891\uff0c\u53ef\u4ee5\u8868\u8ff0\u4e3a\u5076\u53d1\u3001"
+                    "\u82e5\u5e72\u6b21\u51fa\u73b0\u6216\u5c40\u90e8\u51fa\u73b0\u3002"
+                ),
+                (
+                    "8. \u4e0d\u8981\u8f93\u51fa markdown \u5217\u8868\u7b26\u53f7\uff0c"
+                    "\u4e0d\u8981\u7f16\u9020\u8bb0\u5f55\u91cc\u6ca1\u6709\u7684\u4fe1\u606f\u3002"
+                ),
+                (
+                    "9. \u4e0b\u4e00\u6b65\u5efa\u8bae\u8981\u7b80\u5355\u6613\u4e0a\u624b\u5e76\u4e14"
+                    "\u5b9e\u7528\uff0c\u80fd\u591f\u89e3\u51b3\u73b0\u5728\u7684\u95ee\u9898\u3002"
+                ),
+                "10. \u4e0d\u8981\u8f93\u51fa markdown \u683c\u5f0f\u6587\u6863\u3002",
                 "",
-                "记录数据：",
+                "\u8bb0\u5f55\u6570\u636e\uff1a",
                 "\n\n".join(record_blocks),
             ]
         )
+        return "\n\n".join(sections)
 
     @staticmethod
-    def _build_summary_prompt(analysis_texts: list[str], range_label: str) -> str:
+    def _build_summary_prompt(
+        analysis_texts: list[str],
+        range_label: str,
+        user_profile_text: str | None = None,
+    ) -> str:
         blocks = []
         for index, analysis_text in enumerate(analysis_texts, start=1):
-            blocks.append("\n".join([f"分组分析{index}", analysis_text.strip()]))
+            blocks.append("\n".join([f"\u5206\u7ec4\u5206\u6790{index}", analysis_text.strip()]))
 
-        return "\n\n".join(
+        user_profile_context = LLMAnalysisService._build_user_profile_context(user_profile_text)
+        sections = [
+            f"\u5206\u6790\u8303\u56f4\uff1a{range_label}",
+            f"\u5206\u7ec4\u6570\u91cf\uff1a{len(analysis_texts)}",
+            (
+                "\u8bf7\u57fa\u4e8e\u4e0b\u9762\u8fd9\u4e9b\u5206\u7ec4\u5206\u6790\u7ed3\u679c\uff0c"
+                "\u8f93\u51fa\u4e00\u4efd\u6700\u7ec8\u6c47\u603b\u5206\u6790\u3002"
+            ),
+            (
+                "\u8bf7\u91cd\u70b9\u5f52\u7eb3\u7528\u6237\u72b6\u6001\u968f\u7740\u65f6\u95f4\u63a8\u8fdb"
+                "\u51fa\u73b0\u4e86\u54ea\u4e9b\u53d8\u5316\uff0c\u4ee5\u53ca\u8fd9\u4e9b\u53d8\u5316"
+                "\u53ef\u80fd\u548c\u54ea\u4e9b\u89e6\u53d1\u56e0\u7d20\u76f8\u5173\u3002"
+            ),
+        ]
+        if user_profile_context:
+            sections.append(user_profile_context)
+        sections.extend(
             [
-                f"分析范围：{range_label}",
-                f"分组数量：{len(analysis_texts)}",
-                "请基于下面这些分组分析结果，输出一份最终汇总分析。",
-                "请重点归纳用户状态随着时间推进出现了哪些变化，以及这些变化可能和哪些触发因素相关。",
-                "输出要求：",
-                "1. 第一行必须是【分析范围】加时间范围，并在末尾加（汇总）。",
-                "2. 后续按以下标题输出：总体趋势、状态变化、比较严重的问题或高频问题、主要触发因素、已出现的有效应对、下一步建议。",
-                f"3. 第一行之后的正文总长度控制在{settings.ANALYSIS_MAX_LLM_OUTPUT_CHARS}字以内，但不要为了压缩字数省略关键事实、重要问题或必要建议。",
-                "4. 记录数会由系统单独展示，你不要重复统计平均分、记录数、高频改进方向、高频感恩等结构化统计项。",
-                "5. 只有当某类问题、触发因素或负向模式在不少于三分之一的分析样本中出现时，才能明确称为高频。",
-                "6. 如果没有达到三分之一，不要硬说高频，可以表述为偶发、若干次出现或局部出现。",
-                "7. 不要重复逐组罗列，重点做跨分组归纳。",
-                "8. 不要输出 markdown 列表符号，不要编造记录里没有的信息。",
-                "9. 下一步建议要简单易上手并且实用能够解决现在的问题。",
-                "10. 不要输出 markdown 格式文档。",
+                "\u8f93\u51fa\u8981\u6c42\uff1a",
+                (
+                    "1. \u7b2c\u4e00\u884c\u5fc5\u987b\u662f\u3010\u5206\u6790\u8303\u56f4\u3011"
+                    "\u52a0\u65f6\u95f4\u8303\u56f4\uff0c\u5e76\u5728\u672b\u5c3e\u52a0\uff08\u6c47\u603b\uff09\u3002"
+                ),
+                (
+                    "2. \u540e\u7eed\u6309\u4ee5\u4e0b\u6807\u9898\u8f93\u51fa\uff1a\u603b\u4f53\u8d8b\u52bf\u3001"
+                    "\u72b6\u6001\u53d8\u5316\u3001\u6bd4\u8f83\u4e25\u91cd\u7684\u95ee\u9898\u6216"
+                    "\u9ad8\u9891\u95ee\u9898\u3001\u4e3b\u8981\u89e6\u53d1\u56e0\u7d20\u3001"
+                    "\u5df2\u51fa\u73b0\u7684\u6709\u6548\u5e94\u5bf9\u3001\u4e0b\u4e00\u6b65\u5efa\u8bae\u3002"
+                ),
+                (
+                    f"3. \u7b2c\u4e00\u884c\u4e4b\u540e\u7684\u6b63\u6587\u603b\u957f\u5ea6\u63a7\u5236\u5728"
+                    f"{settings.ANALYSIS_MAX_LLM_OUTPUT_CHARS}\u5b57\u4ee5\u5185\uff0c"
+                    "\u4f46\u4e0d\u8981\u4e3a\u4e86\u538b\u7f29\u5b57\u6570\u7701\u7565\u5173\u952e\u4e8b\u5b9e\u3001"
+                    "\u91cd\u8981\u95ee\u9898\u6216\u5fc5\u8981\u5efa\u8bae\u3002"
+                ),
+                (
+                    "4. \u8bb0\u5f55\u6570\u4f1a\u7531\u7cfb\u7edf\u5355\u72ec\u5c55\u793a\uff0c"
+                    "\u4f60\u4e0d\u8981\u91cd\u590d\u7edf\u8ba1\u5e73\u5747\u5206\u3001\u8bb0\u5f55\u6570\u3001"
+                    "\u9ad8\u9891\u6539\u8fdb\u65b9\u5411\u3001\u9ad8\u9891\u611f\u6069\u7b49\u7ed3\u6784\u5316\u7edf\u8ba1\u9879\u3002"
+                ),
+                (
+                    "5. \u5982\u679c\u63d0\u4f9b\u4e86\u7528\u6237\u6027\u522b\u3001\u5e74\u9f84\u6216\u57ce\u5e02\uff0c"
+                    "\u53ef\u4ee5\u9002\u5ea6\u7eb3\u5165\u6c47\u603b\u5206\u6790\uff0c\u8ba9\u5206\u6790"
+                    "\u7ed3\u679c\u548c\u5efa\u8bae\u66f4\u8d34\u8fd1\u7528\u6237\u5904\u5883\uff0c"
+                    "\u4f46\u4e0d\u8981\u8fdb\u884c\u523b\u677f\u5316\u63a8\u65ad\u3002"
+                ),
+                (
+                    "6. \u53ea\u6709\u5f53\u67d0\u7c7b\u95ee\u9898\u3001\u89e6\u53d1\u56e0\u7d20\u6216"
+                    "\u8d1f\u5411\u6a21\u5f0f\u5728\u4e0d\u5c11\u4e8e\u4e09\u5206\u4e4b\u4e00\u7684"
+                    "\u5206\u6790\u6837\u672c\u4e2d\u51fa\u73b0\u65f6\uff0c\u624d\u80fd\u660e\u786e"
+                    "\u79f0\u4e3a\u9ad8\u9891\u3002"
+                ),
+                (
+                    "7. \u5982\u679c\u6ca1\u6709\u8fbe\u5230\u4e09\u5206\u4e4b\u4e00\uff0c"
+                    "\u4e0d\u8981\u786c\u8bf4\u9ad8\u9891\uff0c\u53ef\u4ee5\u8868\u8ff0\u4e3a\u5076\u53d1\u3001"
+                    "\u82e5\u5e72\u6b21\u51fa\u73b0\u6216\u5c40\u90e8\u51fa\u73b0\u3002"
+                ),
+                (
+                    "8. \u4e0d\u8981\u91cd\u590d\u9010\u7ec4\u7f57\u5217\uff0c\u91cd\u70b9\u505a\u8de8\u5206\u7ec4\u5f52\u7eb3\u3002"
+                ),
+                (
+                    "9. \u4e0d\u8981\u8f93\u51fa markdown \u5217\u8868\u7b26\u53f7\uff0c"
+                    "\u4e0d\u8981\u7f16\u9020\u8bb0\u5f55\u91cc\u6ca1\u6709\u7684\u4fe1\u606f\u3002"
+                ),
+                (
+                    "10. \u4e0b\u4e00\u6b65\u5efa\u8bae\u8981\u7b80\u5355\u6613\u4e0a\u624b\u5e76\u4e14"
+                    "\u5b9e\u7528\uff0c\u80fd\u591f\u89e3\u51b3\u73b0\u5728\u7684\u95ee\u9898\u3002"
+                ),
+                "11. \u4e0d\u8981\u8f93\u51fa markdown \u683c\u5f0f\u6587\u6863\u3002",
                 "",
-                "分组分析数据：",
+                "\u5206\u7ec4\u5206\u6790\u6570\u636e\uff1a",
                 "\n\n".join(blocks),
             ]
         )
+        return "\n\n".join(sections)

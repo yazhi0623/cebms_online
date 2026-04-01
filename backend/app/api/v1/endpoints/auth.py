@@ -4,7 +4,7 @@ from app.api.deps import CurrentUser
 from app.api.deps.services import AuthServiceDep
 from app.api.request_utils import get_client_ip
 from app.models.user import User
-from app.schemas.user import RefreshTokenRequest, Token, UserCreate, UserLogin, UserRead
+from app.schemas.user import RefreshTokenRequest, Token, UserCreate, UserLogin, UserProfileUpdate, UserProfileUpdateResult, UserRead
 
 router = APIRouter()
 
@@ -25,6 +25,12 @@ def login(user_in: UserLogin, request: Request, service: AuthServiceDep) -> Toke
 def read_me(current_user: CurrentUser) -> User:
     """返回依赖注入解析出的当前登录用户。"""
     return current_user
+
+
+@router.put("/me", response_model=UserProfileUpdateResult)
+def update_me(profile_in: UserProfileUpdate, current_user: CurrentUser, service: AuthServiceDep) -> UserProfileUpdateResult:
+    """更新当前登录用户的最小资料。"""
+    return service.update_profile(current_user, profile_in)
 
 
 @router.post("/refresh", response_model=Token)
