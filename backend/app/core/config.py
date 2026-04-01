@@ -31,6 +31,7 @@ class Settings(BaseSettings):
     ANALYSIS_THRESHOLD: int = 10
     ANALYSIS_LLM_ENABLED: bool = True
     ANALYSIS_MAX_LLM_OUTPUT_CHARS: int = 300
+    ANALYSIS_LLM_TIMEOUT_SECONDS: int = 300
     ANALYSIS_MODELS_PATH: str = str(Path(__file__).resolve().parents[2] / "config" / "models.json")
     ANALYSIS_WEATHER_ENABLED: bool = False
     ANALYSIS_WEATHER_LOCATION_LABEL: str = ""
