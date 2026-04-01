@@ -108,6 +108,69 @@ def test_batched_generate_analysis_counts_as_one_today_usage(client: TestClient,
     assert create_response.json()["detail"] == "Daily analysis limit reached (1)"
 
 
+def test_analysis_task_generates_result_in_background(
+    client: TestClient,
+    auth_headers: dict[str, str],
+    monkeypatch,
+) -> None:
+    monkeypatch.setattr(settings, "ANALYSIS_THRESHOLD", 2)
+    monkeypatch.setattr(settings, "ANALYSIS_LLM_ENABLED", False)
+    monkeypatch.setattr(settings, "DAILY_ANALYSIS_LIMIT_WHEN_LLM_DISABLED", 3)
+
+    for index in range(2):
+        response = client.post(
+            "/api/v1/records",
+            json={"title": f"Task Record {index}", "content": build_record_content(index)},
+            headers=auth_headers,
+        )
+        assert response.status_code == 201
+
+    create_task_response = client.post(
+        "/api/v1/analyses/tasks",
+        json={"range_months": 12},
+        headers=auth_headers,
+    )
+
+    assert create_task_response.status_code == 201
+    task_payload = create_task_response.json()
+    assert task_payload["status"] in {"pending", "running", "success"}
+
+    task_response = client.get(f"/api/v1/analyses/tasks/{task_payload['id']}", headers=auth_headers)
+    assert task_response.status_code == 200
+    task = task_response.json()
+    assert task["status"] == "success"
+    assert isinstance(task["result_analysis_id"], int)
+    assert task["error_message"] is None
+
+    count_response = client.get("/api/v1/analyses/count/today", headers=auth_headers)
+    assert count_response.status_code == 200
+    assert count_response.json()["count"] == 1
+
+
+def test_analysis_task_marks_failure_without_breaking_creation_response(
+    client: TestClient,
+    auth_headers: dict[str, str],
+    monkeypatch,
+) -> None:
+    monkeypatch.setattr(settings, "ANALYSIS_THRESHOLD", 2)
+
+    response = client.post(
+        "/api/v1/analyses/tasks",
+        json={"range_months": 0},
+        headers=auth_headers,
+    )
+
+    assert response.status_code == 201
+    task_id = response.json()["id"]
+
+    task_response = client.get(f"/api/v1/analyses/tasks/{task_id}", headers=auth_headers)
+    assert task_response.status_code == 200
+    task = task_response.json()
+    assert task["status"] == "failed"
+    assert task["error_message"] == "At least 2 records are required for analysis"
+    assert task["result_analysis_id"] is None
+
+
 def test_generate_analysis_by_template_only_uses_records_with_same_template(client: TestClient, auth_headers: dict[str, str], monkeypatch) -> None:
     monkeypatch.setattr(settings, "ANALYSIS_THRESHOLD", 2)
     monkeypatch.setattr(settings, "DAILY_ANALYSIS_LIMIT", 3)

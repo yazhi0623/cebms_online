@@ -1,4 +1,4 @@
-import type { AnalysisAggregate, AnalysisItem, TodayAnalysisCount } from "../../entities/analysis/types";
+import type { AnalysisAggregate, AnalysisItem, AnalysisTaskItem, TodayAnalysisCount } from "../../entities/analysis/types";
 import { apiRequest } from "../../shared/api/client";
 
 type AnalysisResponse = {
@@ -25,6 +25,20 @@ type TodayCountResponse = {
   limit: number;
   threshold: number;
   llm_enabled?: boolean;
+};
+
+type AnalysisTaskResponse = {
+  id: number;
+  user_id: number;
+  record_id: number | null;
+  template_id: number | null;
+  range_months: number;
+  status: "pending" | "running" | "success" | "failed";
+  result_analysis_id: number | null;
+  error_message: string | null;
+  created_at: string;
+  updated_at: string;
+  finished_at: string | null;
 };
 
 const ANALYSIS_TITLE_PREFIX = "【分析范围】";
@@ -98,6 +112,22 @@ function mapAnalysis(item: AnalysisResponse): AnalysisItem {
   };
 }
 
+function mapAnalysisTask(item: AnalysisTaskResponse): AnalysisTaskItem {
+  return {
+    id: item.id,
+    userId: item.user_id,
+    recordId: item.record_id,
+    templateId: item.template_id,
+    rangeMonths: item.range_months,
+    status: item.status,
+    resultAnalysisId: item.result_analysis_id,
+    errorMessage: item.error_message,
+    createdAt: item.created_at,
+    updatedAt: item.updated_at,
+    finishedAt: item.finished_at,
+  };
+}
+
 export async function fetchAnalyses(accessToken: string): Promise<AnalysisItem[]> {
   // 历史列表接口返回原始数组，这里顺手完成展示字段映射。
   const response = await apiRequest<AnalysisResponse[]>("/analyses", { accessToken });
@@ -140,6 +170,30 @@ export async function generateAnalysis(
   });
 
   return mapAnalysis(response);
+}
+
+export async function createAnalysisTask(
+  accessToken: string,
+  options?: { recordId?: number | null; templateId?: number | null; rangeMonths?: number },
+): Promise<AnalysisTaskItem> {
+  const response = await apiRequest<AnalysisTaskResponse>("/analyses/tasks", {
+    accessToken,
+    method: "POST",
+    body: JSON.stringify({
+      ...(options?.recordId ? { record_id: options.recordId } : {}),
+      ...(options?.templateId ? { template_id: options.templateId } : {}),
+      range_months: options?.rangeMonths ?? 0,
+    }),
+  });
+
+  return mapAnalysisTask(response);
+}
+
+export async function fetchAnalysisTask(accessToken: string, taskId: number): Promise<AnalysisTaskItem> {
+  const response = await apiRequest<AnalysisTaskResponse>(`/analyses/tasks/${taskId}`, {
+    accessToken,
+  });
+  return mapAnalysisTask(response);
 }
 
 export async function deleteAnalysis(accessToken: string, analysisId: number): Promise<void> {

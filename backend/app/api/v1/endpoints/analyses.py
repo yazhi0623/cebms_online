@@ -1,9 +1,13 @@
-﻿from fastapi import APIRouter, Response, status
+from fastapi import APIRouter, BackgroundTasks, Response, status
+from sqlalchemy.orm import Session, sessionmaker
 
-from app.api.deps import CurrentUser
-from app.api.deps.services import AnalysisServiceDep
+from app.api.deps import CurrentUser, DBSession
+from app.api.deps.services import AnalysisServiceDep, AnalysisTaskServiceDep
 from app.models.analysis import Analysis
+from app.models.analysis_task import AnalysisTask
 from app.schemas.analysis import AnalysisCreate, AnalysisGenerateRequest, AnalysisRead
+from app.schemas.analysis_task import AnalysisTaskCreate, AnalysisTaskRead
+from app.services.task_executor import run_analysis_task
 
 router = APIRouter()
 
@@ -34,6 +38,27 @@ def generate_analysis(
 ) -> Analysis:
     """根据用户历史记录生成新的分析结果。"""
     return service.generate_analysis(current_user.id, payload, current_user)
+
+
+@router.post("/tasks", response_model=AnalysisTaskRead, status_code=status.HTTP_201_CREATED)
+def create_analysis_task(
+    payload: AnalysisTaskCreate,
+    background_tasks: BackgroundTasks,
+    db: DBSession,
+    current_user: CurrentUser,
+    service: AnalysisTaskServiceDep,
+) -> AnalysisTask:
+    """创建分析后台任务，并交给后台执行器处理。"""
+    task = service.create_task(current_user.id, payload)
+    session_factory = sessionmaker(bind=db.get_bind(), class_=Session, autoflush=False, autocommit=False)
+    background_tasks.add_task(run_analysis_task, session_factory, task.id)
+    return task
+
+
+@router.get("/tasks/{task_id}", response_model=AnalysisTaskRead)
+def get_analysis_task(task_id: int, current_user: CurrentUser, service: AnalysisTaskServiceDep) -> AnalysisTask:
+    """查询分析后台任务状态。"""
+    return service.get_task(task_id, current_user.id)
 
 
 @router.post("", response_model=AnalysisRead, status_code=status.HTTP_201_CREATED)

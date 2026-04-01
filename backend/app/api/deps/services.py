@@ -4,6 +4,7 @@ from fastapi import Depends
 
 from app.api.deps import DBSession
 from app.repositories.analysis_repository import AnalysisRepository
+from app.repositories.analysis_task_repository import AnalysisTaskRepository
 from app.repositories.audit_log_repository import AuditLogRepository
 from app.repositories.backup_snapshot_repository import BackupSnapshotRepository
 from app.repositories.export_task_repository import ExportTaskRepository
@@ -12,6 +13,7 @@ from app.repositories.record_repository import RecordRepository
 from app.repositories.template_repository import TemplateRepository
 from app.repositories.user_repository import UserRepository
 from app.services.analysis_service import AnalysisService
+from app.services.analysis_task_service import AnalysisTaskService
 from app.services.llm_analysis_service import LLMAnalysisService
 from app.services.audit_service import AuditService
 from app.services.auth_service import AuthService
@@ -43,6 +45,11 @@ def get_analysis_service(db: DBSession) -> AnalysisService:
     return AnalysisService(AnalysisRepository(db), TemplateRepository(db), LLMAnalysisService())
 
 
+def get_analysis_task_service(db: DBSession) -> AnalysisTaskService:
+    """构造分析后台任务服务。"""
+    return AnalysisTaskService(AnalysisTaskRepository(db))
+
+
 def get_audit_service(db: DBSession) -> AuditService:
     return AuditService(AuditLogRepository(db))
 
@@ -71,6 +78,7 @@ AuthServiceDep = Annotated[AuthService, Depends(get_auth_service)]
 RecordServiceDep = Annotated[RecordService, Depends(get_record_service)]
 TemplateServiceDep = Annotated[TemplateService, Depends(get_template_service)]
 AnalysisServiceDep = Annotated[AnalysisService, Depends(get_analysis_service)]
+AnalysisTaskServiceDep = Annotated[AnalysisTaskService, Depends(get_analysis_task_service)]
 ImportServiceDep = Annotated[ImportService, Depends(get_import_service)]
 ExportServiceDep = Annotated[ExportService, Depends(get_export_service)]
 BackupServiceDep = Annotated[BackupService, Depends(get_backup_service)]
