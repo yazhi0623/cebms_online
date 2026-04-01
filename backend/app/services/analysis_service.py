@@ -35,7 +35,7 @@ class AnalysisService:
     def aggregate_analyses(self, user_id: int) -> dict[str, str | int]:
         """构建分析页概览区域需要的聚合结果。"""
         analyses = self.list_analyses(user_id)
-        total_count = self.analysis_repository.count_all_by_user(user_id)
+        total_count = self.analysis_repository.count_billable_all_by_user(user_id)
         if not analyses:
             return {
                 "count": 0,
@@ -60,7 +60,7 @@ class AnalysisService:
     def today_analysis_count(self, user_id: int) -> dict[str, int | str | bool]:
         """返回当前日期的分析次数和配额信息。"""
         today = date.today()
-        count = len(self.analysis_repository.list_by_user_and_day(user_id, today))
+        count = self.analysis_repository.count_billable_by_user_and_day(user_id, today)
         daily_limit = self._get_daily_limit()
         return {
             "day_key": today.isoformat(),
@@ -234,7 +234,7 @@ class AnalysisService:
 
     def _ensure_daily_limit(self, user_id: int, day_key: date) -> None:
         """执行按天的分析次数限制校验。"""
-        today_count = len(self.analysis_repository.list_by_user_and_day(user_id, day_key))
+        today_count = self.analysis_repository.count_billable_by_user_and_day(user_id, day_key)
         daily_limit = self._get_daily_limit()
         if today_count >= daily_limit:
             raise HTTPException(

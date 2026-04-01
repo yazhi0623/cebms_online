@@ -39,6 +39,29 @@ class StubAnalysisRepository:
     def count_all_by_user(self, user_id: int):
         return len([item for item in self.analyses if item.user_id == user_id])
 
+    def count_billable_all_by_user(self, user_id: int):
+        return len(
+            [
+                item
+                for item in self.analyses
+                if item.user_id == user_id
+                and getattr(item, "source_analysis_id", None) is None
+                and item.analysis_type != "batch_chunk"
+            ]
+        )
+
+    def count_billable_by_user_and_day(self, user_id: int, day_key):
+        return len(
+            [
+                item
+                for item in self.analyses
+                if item.user_id == user_id
+                and item.day_key == day_key
+                and getattr(item, "source_analysis_id", None) is None
+                and item.analysis_type != "batch_chunk"
+            ]
+        )
+
     def list_by_user_and_day(self, user_id: int, day_key):
         return [item for item in self.analyses if item.user_id == user_id and item.day_key == day_key]
 

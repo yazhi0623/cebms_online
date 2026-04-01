@@ -53,7 +53,12 @@ function formatAnalysisTitleDate(value: string): string {
 function normalizeRangeLabel(rangeLabel: string): string {
   return rangeLabel
     .replace(/（第\d+\/\d+组）$/, "")
+    .replace(/（第\d+\/\d+段(?:，[^）]+)?）$/, "")
     .replace(/（汇总）$/, "")
+    .replace(/^前一个月$/, "近一个月")
+    .replace(/^前三个月$/, "近三个月")
+    .replace(/^前六个月$/, "近六个月")
+    .replace(/^前一年$/, "近一年")
     .trim();
 }
 
