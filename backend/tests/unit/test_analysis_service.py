@@ -48,6 +48,29 @@ class StubAnalysisRepository:
     def count_all_by_user(self, user_id: int):
         return len([item for item in self.analyses if item.user_id == user_id])
 
+    def count_billable_all_by_user(self, user_id: int):
+        return len(
+            [
+                item
+                for item in self.analyses
+                if item.user_id == user_id
+                and getattr(item, "source_analysis_id", None) is None
+                and item.analysis_type != "batch_chunk"
+            ]
+        )
+
+    def count_billable_by_user_and_day(self, user_id: int, day_key: date):
+        return len(
+            [
+                item
+                for item in self.analyses
+                if item.user_id == user_id
+                and item.day_key == day_key
+                and getattr(item, "source_analysis_id", None) is None
+                and item.analysis_type != "batch_chunk"
+            ]
+        )
+
     def list_by_user_and_day(self, user_id: int, day_key: date):
         return [item for item in self.analyses if item.user_id == user_id and item.day_key == day_key]
 
@@ -67,6 +90,7 @@ class StubAnalysisRepository:
             content=content,
             day_key=day_key,
             created_at=datetime.now(UTC),
+            source_analysis_id=source_analysis_id,
         )
         self.analyses.append(analysis)
         self.created_analysis = analysis
@@ -129,6 +153,51 @@ def test_aggregate_analyses_returns_empty_state() -> None:
         "latest_day": None,
         "combined_content": "暂无已保存的AI分析结果",
     }
+
+
+def test_aggregate_analyses_uses_billable_total_count() -> None:
+    repository = StubAnalysisRepository()
+    repository.analyses = [
+        SimpleNamespace(
+            id=1,
+            user_id=1,
+            record_id=None,
+            template_id=None,
+            analysis_type="single",
+            content="visible analysis",
+            day_key=date.today(),
+            created_at=datetime.now(UTC),
+            source_analysis_id=None,
+        ),
+        SimpleNamespace(
+            id=2,
+            user_id=1,
+            record_id=None,
+            template_id=None,
+            analysis_type="batch_chunk",
+            content="chunk analysis",
+            day_key=date.today(),
+            created_at=datetime.now(UTC),
+            source_analysis_id=None,
+        ),
+        SimpleNamespace(
+            id=3,
+            user_id=1,
+            record_id=None,
+            template_id=None,
+            analysis_type="single",
+            content="restored analysis",
+            day_key=date.today(),
+            created_at=datetime.now(UTC),
+            source_analysis_id=123,
+        ),
+    ]
+    service = AnalysisService(repository, StubTemplateRepository())
+
+    result = service.aggregate_analyses(1)
+
+    assert result["count"] == 3
+    assert result["total_count"] == 1
 
 
 def test_generate_analysis_rejects_when_threshold_not_met(monkeypatch) -> None:
@@ -252,7 +321,7 @@ def test_build_analysis_text_extracts_summary() -> None:
 
     result = service._build_analysis_text(records, 3)
 
-    assert "【分析范围】前三个月" in result
+    assert "【分析范围】近三个月" in result
     assert "本次纳入分析的记录数：2 条" in result
     assert "平均情绪分值" not in result
     assert "高频问题" not in result
@@ -322,6 +391,62 @@ def test_delete_analysis_keeps_today_usage_count() -> None:
     assert service.list_analyses(1) == []
 
 
+def test_today_analysis_count_excludes_imported_and_batch_chunk_rows() -> None:
+    repository = StubAnalysisRepository()
+    today = date.today()
+    repository.analyses = [
+        SimpleNamespace(
+            id=1,
+            user_id=1,
+            record_id=None,
+            template_id=None,
+            analysis_type="single",
+            content="manual",
+            day_key=today,
+            created_at=datetime.now(UTC),
+            source_analysis_id=None,
+        ),
+        SimpleNamespace(
+            id=2,
+            user_id=1,
+            record_id=None,
+            template_id=None,
+            analysis_type="batch_chunk",
+            content="chunk",
+            day_key=today,
+            created_at=datetime.now(UTC),
+            source_analysis_id=None,
+        ),
+        SimpleNamespace(
+            id=3,
+            user_id=1,
+            record_id=None,
+            template_id=None,
+            analysis_type="single",
+            content="restored",
+            day_key=today,
+            created_at=datetime.now(UTC),
+            source_analysis_id=99,
+        ),
+        SimpleNamespace(
+            id=4,
+            user_id=1,
+            record_id=None,
+            template_id=None,
+            analysis_type="batch_summary",
+            content="final",
+            day_key=today,
+            created_at=datetime.now(UTC),
+            source_analysis_id=None,
+        ),
+    ]
+    service = AnalysisService(repository, StubTemplateRepository())
+
+    result = service.today_analysis_count(1)
+
+    assert result["count"] == 2
+
+
 def test_today_analysis_count_exposes_llm_enabled(monkeypatch) -> None:
     service = AnalysisService(StubAnalysisRepository(), StubTemplateRepository())
     monkeypatch.setattr(settings, "ANALYSIS_LLM_ENABLED", False)
@@ -331,6 +456,41 @@ def test_today_analysis_count_exposes_llm_enabled(monkeypatch) -> None:
 
     assert result["llm_enabled"] is False
     assert result["limit"] == 5
+
+
+def test_create_analysis_limit_ignores_imported_and_batch_chunk_rows(monkeypatch) -> None:
+    repository = StubAnalysisRepository()
+    today = date.today()
+    repository.analyses = [
+        SimpleNamespace(
+            id=1,
+            user_id=1,
+            record_id=None,
+            template_id=None,
+            analysis_type="batch_chunk",
+            day_key=today,
+            created_at=datetime.now(UTC),
+            content="chunk",
+            source_analysis_id=None,
+        ),
+        SimpleNamespace(
+            id=2,
+            user_id=1,
+            record_id=None,
+            template_id=None,
+            analysis_type="single",
+            day_key=today,
+            created_at=datetime.now(UTC),
+            content="restored",
+            source_analysis_id=88,
+        ),
+    ]
+    service = AnalysisService(repository, StubTemplateRepository())
+    monkeypatch.setattr(settings, "DAILY_ANALYSIS_LIMIT", 1)
+
+    result = service.create_analysis(1, AnalysisCreate(record_id=None, content="new", day_key=today))
+
+    assert result.id == 3
 
 
 def test_create_analysis_uses_disabled_llm_limit(monkeypatch) -> None:
@@ -346,6 +506,24 @@ def test_create_analysis_uses_disabled_llm_limit(monkeypatch) -> None:
         service.create_analysis(1, AnalysisCreate(record_id=None, content="new", day_key=date.today()))
 
     assert exc.value.status_code == 400
+    assert exc.value.detail == "Daily analysis limit reached (1)"
+
+
+def test_generate_batched_analysis_counts_as_one_daily_usage(monkeypatch) -> None:
+    repository = StubAnalysisRepository()
+    repository.records = [make_record(index, 1, f"content {index}") for index in range(1, 62)]
+    llm_service = StubLLMAnalysisService("【分析范围】全部\n总体趋势：稳定")
+    service = AnalysisService(repository, StubTemplateRepository(), llm_service)
+    monkeypatch.setattr(settings, "ANALYSIS_THRESHOLD", 2)
+    monkeypatch.setattr(settings, "DAILY_ANALYSIS_LIMIT", 1)
+
+    result = service.generate_analysis(1, AnalysisGenerateRequest(record_id=None, range_months=0))
+
+    assert result.analysis_type == "batch_summary"
+
+    with pytest.raises(HTTPException) as exc:
+        service.create_analysis(1, AnalysisCreate(record_id=None, content="manual", day_key=date.today()))
+
     assert exc.value.detail == "Daily analysis limit reached (1)"
 
 

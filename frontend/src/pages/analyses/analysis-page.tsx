@@ -587,10 +587,10 @@ export function AnalysisPage() {
             </div>
             <div className="data-center-stat">
               <span className="data-center-stat__label">累计分析</span>
-              <strong>{visibleAnalyses.length}</strong>
+              <strong>{aggregate?.totalCount ?? 0}</strong>
             </div>
             <div className="data-center-stat">
-              <span className="data-center-stat__label">最近时间</span>
+              <span className="data-center-stat__label">最新有效记录时间</span>
               <strong>{latestAnalysisTime ? (portraitLayout ? formatDateOnly(latestAnalysisTime) : formatDate(latestAnalysisTime)) : "暂无"}</strong>
             </div>
           </div>

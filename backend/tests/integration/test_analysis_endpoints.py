@@ -64,7 +64,7 @@ def test_generate_analysis_does_not_append_to_record_and_updates_count(client: T
     assert generate_response.status_code == 201
     analysis = generate_response.json()
     assert analysis["record_id"] == latest_record_id
-    assert "【分析范围】前三个月" in analysis["content"]
+    assert "【分析范围】近三个月" in analysis["content"]
     assert f"{RECORD_COUNT_TEXT}：2 条" in analysis["content"]
     assert "平均情绪分值" not in analysis["content"]
 
@@ -76,6 +76,36 @@ def test_generate_analysis_does_not_append_to_record_and_updates_count(client: T
     assert count_payload["threshold"] == 2
     assert count_payload["llm_enabled"] is False
     assert count_payload["day_key"] == date.today().isoformat()
+
+
+def test_batched_generate_analysis_counts_as_one_today_usage(client: TestClient, auth_headers: dict[str, str], monkeypatch) -> None:
+    monkeypatch.setattr(settings, "ANALYSIS_THRESHOLD", 2)
+    monkeypatch.setattr(settings, "DAILY_ANALYSIS_LIMIT", 1)
+    monkeypatch.setattr(settings, "ANALYSIS_LLM_ENABLED", True)
+
+    for index in range(31):
+        response = client.post(
+            "/api/v1/records",
+            json={"title": f"Record {index}", "content": build_record_content(index)},
+            headers=auth_headers,
+        )
+        assert response.status_code == 201
+
+    generate_response = client.post("/api/v1/analyses/generate", json={"record_id": None, "range_months": 0}, headers=auth_headers)
+    assert generate_response.status_code == 201
+    assert generate_response.json()["analysis_type"] == "batch_summary"
+
+    count_response = client.get("/api/v1/analyses/count/today", headers=auth_headers)
+    assert count_response.status_code == 200
+    assert count_response.json()["count"] == 1
+
+    create_response = client.post(
+        "/api/v1/analyses",
+        json={"record_id": None, "content": "manual analysis", "day_key": date.today().isoformat()},
+        headers=auth_headers,
+    )
+    assert create_response.status_code == 400
+    assert create_response.json()["detail"] == "Daily analysis limit reached (1)"
 
 
 def test_generate_analysis_by_template_only_uses_records_with_same_template(client: TestClient, auth_headers: dict[str, str], monkeypatch) -> None:

@@ -10,10 +10,10 @@ class AnalysisSummaryService:
     """Provide analysis summaries and emotion-aware prompt context."""
 
     RANGE_LABELS = {
-        1: "前一个月",
-        3: "前三个月",
-        6: "前六个月",
-        12: "前一年",
+        1: "近一个月",
+        3: "近三个月",
+        6: "近六个月",
+        12: "近一年",
         0: "全部",
     }
 

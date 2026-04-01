@@ -30,6 +30,23 @@ class AnalysisRepository:
         statement = select(func.count(Analysis.id)).where(Analysis.user_id == user_id)
         return int(self.db.scalar(statement) or 0)
 
+    def count_billable_all_by_user(self, user_id: int) -> int:
+        statement = select(func.count(Analysis.id)).where(
+            Analysis.user_id == user_id,
+            Analysis.source_analysis_id.is_(None),
+            Analysis.analysis_type != "batch_chunk",
+        )
+        return int(self.db.scalar(statement) or 0)
+
+    def count_billable_by_user_and_day(self, user_id: int, day_key: date) -> int:
+        statement = select(func.count(Analysis.id)).where(
+            Analysis.user_id == user_id,
+            Analysis.day_key == day_key,
+            Analysis.source_analysis_id.is_(None),
+            Analysis.analysis_type != "batch_chunk",
+        )
+        return int(self.db.scalar(statement) or 0)
+
     def list_by_user_and_day(self, user_id: int, day_key: date) -> list[Analysis]:
         statement = select(Analysis).where(
             Analysis.user_id == user_id,
