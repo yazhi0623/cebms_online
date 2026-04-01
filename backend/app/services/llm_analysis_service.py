@@ -124,7 +124,11 @@ class LLMAnalysisService:
         if not api_key:
             return None
 
-        return OpenAI(api_key=api_key, base_url=base_url)
+        return OpenAI(
+            api_key=api_key,
+            base_url=base_url,
+            timeout=settings.ANALYSIS_LLM_TIMEOUT_SECONDS,
+        )
 
     def _load_models_payload(self) -> dict[str, Any]:
         if not self.models_path.exists():
