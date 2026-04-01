@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 
 import type { CurrentUser } from "../../entities/user/types";
+import { DropdownAction } from "../../shared/ui/dropdown-action";
 
 type ProfileModalProps = {
   currentUser: CurrentUser;
@@ -10,6 +11,7 @@ type ProfileModalProps = {
   onSave: (profile: {
     username: string;
     gender: string;
+    age: string;
     city: string;
     phone: string;
     email: string;
@@ -17,8 +19,14 @@ type ProfileModalProps = {
 };
 
 export function ProfileModal({ currentUser, saving, error, onClose, onSave }: ProfileModalProps) {
+  const genderOptions = [
+    { value: "\u7537", label: "\u7537" },
+    { value: "\u5973", label: "\u5973" },
+    { value: "\u4e0d\u544a\u8bc9\u4f60", label: "\u4e0d\u544a\u8bc9\u4f60" },
+  ];
   const [username, setUsername] = useState(currentUser.username);
   const [gender, setGender] = useState(currentUser.gender ?? "");
+  const [age, setAge] = useState(currentUser.age != null ? String(currentUser.age) : "");
   const [city, setCity] = useState(currentUser.city ?? "");
   const [phone, setPhone] = useState(currentUser.phone ?? "");
   const [email, setEmail] = useState(currentUser.email ?? "");
@@ -26,10 +34,11 @@ export function ProfileModal({ currentUser, saving, error, onClose, onSave }: Pr
   useEffect(() => {
     setUsername(currentUser.username);
     setGender(currentUser.gender ?? "");
+    setAge(currentUser.age != null ? String(currentUser.age) : "");
     setCity(currentUser.city ?? "");
     setPhone(currentUser.phone ?? "");
     setEmail(currentUser.email ?? "");
-  }, [currentUser.city, currentUser.email, currentUser.gender, currentUser.id, currentUser.phone, currentUser.username]);
+  }, [currentUser.age, currentUser.city, currentUser.email, currentUser.gender, currentUser.id, currentUser.phone, currentUser.username]);
 
   return (
     <div aria-modal="true" className="profile-modal-overlay" onClick={onClose} role="dialog">
@@ -44,24 +53,37 @@ export function ProfileModal({ currentUser, saving, error, onClose, onSave }: Pr
         </button>
         <h2 className="profile-modal-card__title">{"\u4e2a\u4eba\u8d44\u6599"}</h2>
         <p className="profile-modal-card__hint">
-          {"\u8f93\u5165\u66f4\u591a\u8d44\u6599\u53ef\u4ee5\u63d0\u4f9b\u66f4\u51c6\u786e\u7684\u5efa\u8bae"}
+          {"\u8f93\u5165\u66f4\u591a\u8d44\u6599\u6709\u52a9\u4e8eAI\u63d0\u4f9b\u66f4\u51c6\u786e\u7684\u5efa\u8bae"}
         </p>
         <label className="profile-modal-card__row">
           <span>{"\u7528\u6237\u540d"}</span>
           <input
+            disabled
             maxLength={50}
-            onChange={(event) => setUsername(event.target.value)}
+            readOnly
             value={username}
           />
         </label>
         <label className="profile-modal-card__row">
           <span>{"\u6027\u522b"}</span>
-          <select onChange={(event) => setGender(event.target.value)} value={gender}>
-            <option value="">{"\u8bf7\u9009\u62e9"}</option>
-            <option value={"\u7537"}>{"\u7537"}</option>
-            <option value={"\u5973"}>{"\u5973"}</option>
-            <option value={"\u4e0d\u544a\u8bc9\u4f60"}>{"\u4e0d\u544a\u8bc9\u4f60"}</option>
-          </select>
+          <DropdownAction
+            className="dropdown-action--full profile-modal-dropdown"
+            label={"\u8bf7\u9009\u62e9"}
+            onSelect={(value) => setGender(value)}
+            options={genderOptions}
+            selectedLabel={gender || "\u8bf7\u9009\u62e9"}
+            selectedValue={gender || null}
+          />
+        </label>
+        <label className="profile-modal-card__row">
+          <span>{"\u5e74\u9f84"}</span>
+          <input
+            inputMode="numeric"
+            maxLength={3}
+            onChange={(event) => setAge(event.target.value.replace(/[^\d]/g, "").slice(0, 3))}
+            placeholder={"\u9009\u586b"}
+            value={age}
+          />
         </label>
         <label className="profile-modal-card__row">
           <span>{"\u57ce\u5e02"}</span>
@@ -96,7 +118,7 @@ export function ProfileModal({ currentUser, saving, error, onClose, onSave }: Pr
             className="shell__nav-button shell__nav-button--active"
             disabled={saving}
             onClick={() => {
-              void onSave({ username, gender, city, phone, email });
+              void onSave({ username, gender, age, city, phone, email });
             }}
             type="button"
           >

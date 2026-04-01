@@ -4,6 +4,7 @@ from fastapi import HTTPException, status
 
 from app.core.config import settings
 from app.models.analysis import Analysis
+from app.models.user import User
 from app.repositories.analysis_repository import AnalysisRepository
 from app.repositories.template_repository import TemplateRepository
 from app.schemas.analysis import AnalysisCreate, AnalysisGenerateRequest
@@ -69,7 +70,7 @@ class AnalysisService:
             "llm_enabled": settings.ANALYSIS_LLM_ENABLED,
         }
 
-    def generate_analysis(self, user_id: int, payload: AnalysisGenerateRequest) -> Analysis:
+    def generate_analysis(self, user_id: int, payload: AnalysisGenerateRequest, current_user: User | None = None) -> Analysis:
         """在给定时间范围内生成分析结果。
 
         这里会先校验记录数量门槛和每日次数限制，再决定走单次分析还是分批分析。
@@ -96,9 +97,25 @@ class AnalysisService:
         day_key = date.today()
         self._ensure_daily_limit(user_id, day_key)
         if len(records) > self.BATCH_SIZE:
-            return self._generate_batched_analysis(user_id, payload.record_id, payload.template_id, records, range_label, day_key)
+            return self._generate_batched_analysis(
+                user_id,
+                payload.record_id,
+                payload.template_id,
+                records,
+                range_label,
+                day_key,
+                current_user,
+            )
 
-        return self._generate_single_analysis(user_id, payload.record_id, payload.template_id, records, range_label, day_key)
+        return self._generate_single_analysis(
+            user_id,
+            payload.record_id,
+            payload.template_id,
+            records,
+            range_label,
+            day_key,
+            current_user,
+        )
 
     def _generate_single_analysis(
         self,
@@ -108,10 +125,12 @@ class AnalysisService:
         records,
         range_label: str,
         day_key: date,
+        current_user: User | None = None,
     ) -> Analysis:
         """直接基于过滤后的记录集合生成一次分析。"""
         summary_content = self._with_range_label(self._build_analysis_text(records, 0), range_label)
-        content = self.llm_analysis_service.generate_analysis_text(records, range_label)
+        user_profile_text = self._build_user_profile_text(current_user)
+        content = self.llm_analysis_service.generate_analysis_text(records, range_label, user_profile_text)
         if not content:
             content = summary_content
         else:
@@ -135,6 +154,7 @@ class AnalysisService:
         records,
         range_label: str,
         day_key: date,
+        current_user: User | None = None,
     ) -> Analysis:
         """先分块生成，再对分块结果做最终汇总。"""
         chunks = self._chunk_records(records, self.BATCH_SIZE)
@@ -144,7 +164,8 @@ class AnalysisService:
         for index, chunk in enumerate(chunks, start=1):
             chunk_label = f"{range_label}（第{index}/{total_chunks}组）"
             chunk_summary = self._with_range_label(self._build_analysis_text(chunk, 0), chunk_label)
-            chunk_content = self.llm_analysis_service.generate_analysis_text(chunk, chunk_label)
+            user_profile_text = self._build_user_profile_text(current_user)
+            chunk_content = self.llm_analysis_service.generate_analysis_text(chunk, chunk_label, user_profile_text)
             if not chunk_content:
                 chunk_content = chunk_summary
             else:
@@ -169,6 +190,7 @@ class AnalysisService:
         final_content = self.llm_analysis_service.generate_summary_text(
             [analysis.content for analysis in chunk_analyses],
             final_label,
+            self._build_user_profile_text(current_user),
         )
         if not final_content:
             final_content = final_summary
@@ -292,6 +314,28 @@ class AnalysisService:
             return f"{content}\n" + "\n".join(missing_lines)
 
         return f"{content}\n\n下一步建议：\n" + "\n".join(missing_lines)
+
+    @staticmethod
+    def _build_user_profile_text(current_user: User | None) -> str | None:
+        if current_user is None:
+            return None
+
+        lines = []
+        gender = (current_user.gender or "").strip()
+        if gender in {"男", "女"}:
+            lines.append(f"\u6027\u522b\uff1a{gender}")
+        if current_user.age is not None:
+            lines.append(f"\u5e74\u9f84\uff1a{current_user.age}")
+        if (current_user.city or "").strip():
+            lines.append(f"\u57ce\u5e02\uff1a{current_user.city.strip()}")
+
+        if not lines:
+            return None
+
+        lines.append(
+            "\u8bf7\u5728\u5206\u6790\u548c\u5efa\u8bae\u91cc\u53c2\u8003\u8fd9\u4e9b\u80cc\u666f\u4fe1\u606f\uff0c\u4f46\u4e0d\u8981\u523b\u677f\u5370\u8c61\u6216\u8fc7\u5ea6\u63a8\u65ad\u3002"
+        )
+        return "\n".join(lines)
 
     def _build_required_emotional_guidance(self, records) -> list[str]:
         if not records:

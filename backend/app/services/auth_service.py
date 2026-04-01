@@ -99,6 +99,7 @@ class AuthService:
             )
 
         gender = (profile_in.gender or "").strip() or None
+        age = profile_in.age
         city = (profile_in.city or "").strip() or None
         phone = (profile_in.phone or "").strip() or None
         email = (profile_in.email or "").strip() or None
@@ -107,6 +108,7 @@ class AuthService:
             current_user,
             username=username,
             gender=gender,
+            age=age,
             city=city,
             phone=phone,
             email=email,

@@ -40,7 +40,7 @@ def generate_analysis(
 ) -> Analysis:
     """旧版自动生成分析入口。"""
     service = AnalysisService(AnalysisRepository(db), TemplateRepository(db), LLMAnalysisService())
-    return service.generate_analysis(current_user.id, payload)
+    return service.generate_analysis(current_user.id, payload, current_user)
 
 
 @router.post("", response_model=AnalysisRead, status_code=status.HTTP_201_CREATED)

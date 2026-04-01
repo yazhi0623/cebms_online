@@ -19,6 +19,7 @@ class UserRead(BaseModel):
     id: int
     username: str
     gender: str | None = None
+    age: int | None = None
     city: str | None = None
     phone: str | None = None
     email: str | None = None
@@ -32,6 +33,7 @@ class UserProfileUpdate(BaseModel):
 
     username: str = Field(min_length=3, max_length=50, pattern=USERNAME_PATTERN)
     gender: str | None = Field(default=None, max_length=20)
+    age: int | None = Field(default=None, ge=0, le=120)
     city: str | None = Field(default=None, max_length=100)
     phone: str | None = Field(default=None, max_length=30)
     email: str | None = Field(default=None, max_length=255)

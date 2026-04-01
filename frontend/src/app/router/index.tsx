@@ -184,6 +184,7 @@ export function AppRouter() {
   async function handleProfileSave(profile: {
     username: string;
     gender: string;
+    age: string;
     city: string;
     phone: string;
     email: string;

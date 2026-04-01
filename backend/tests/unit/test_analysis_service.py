@@ -17,12 +17,19 @@ class StubLLMAnalysisService:
         self.calls = []
         self.summary_calls = []
 
-    def generate_analysis_text(self, records, range_label: str) -> str | None:
-        self.calls.append({"records": records, "range_label": range_label})
+    def generate_analysis_text(self, records, range_label: str, user_profile_text: str | None = None) -> str | None:
+        self.calls.append({"records": records, "range_label": range_label, "user_profile_text": user_profile_text})
         return self.result
 
-    def generate_summary_text(self, analysis_texts, range_label: str) -> str | None:
-        self.summary_calls.append({"analysis_texts": analysis_texts, "range_label": range_label})
+    def generate_summary_text(
+        self,
+        analysis_texts,
+        range_label: str,
+        user_profile_text: str | None = None,
+    ) -> str | None:
+        self.summary_calls.append(
+            {"analysis_texts": analysis_texts, "range_label": range_label, "user_profile_text": user_profile_text}
+        )
         return self.result
 
 

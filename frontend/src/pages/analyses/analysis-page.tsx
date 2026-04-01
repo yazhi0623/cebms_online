@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+﻿import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { CSSProperties } from "react";
 
 import type { AnalysisAggregate, AnalysisItem, TodayAnalysisCount } from "../../entities/analysis/types";
@@ -46,7 +46,7 @@ type AnalysisBlock =
 
 const AI_SUPPLEMENT_HEADING = "AI分析：";
 const NEXT_STEP_HEADING = "下一步建议：";
-const ANALYSIS_SAMPLE_NOTICE = "AI分析功能暂时关闭，目前生成样本数据";
+const ANALYSIS_SAMPLE_NOTICE = "AI分析功能暂时关闭，目前生成的是样本数据";
 
 const DEMO_ANALYSES: AnalysisItem[] = [
   {
@@ -69,9 +69,9 @@ const DEMO_ANALYSES: AnalysisItem[] = [
     recordId: null,
     templateId: null,
     analysisType: "batch_summary",
-    title: "AI分析·前三个月·2026-03-30",
+    title: "AI分析·近三个月·2026-03-30",
     content:
-      "总体趋势：近三个月情绪波动和精力起伏都比较明显，低谷通常出现在连续忙碌或睡眠不稳之后。\n\n状态变化：偶尔会有几天恢复得不错，但一旦节奏被打乱，容易重新进入低能量状态。\n\n重复出现的问题模式：任务一多就容易拖到很晚，拖延后又加重内耗。\n\n已出现的有效应对：拆小步骤、减少当天目标、保留固定的休息时段。\n\n下一步建议：继续观察睡眠和任务密度对情绪的影响，每天只记录一个最想改善的问题。",
+      "总体趋势：近三个月情绪波动和精力起伏都比较明显，低谷通常出现在连续忙碌或睡眠不稳之后。\n\n状态变化：偶尔会有几天恢复得不错，但一旦节奏被打乱，就容易重新进入低能量状态。\n\n重复出现的问题模式：任务一多就容易拖到很晚，拖延后又会加重内耗。\n\n已出现的有效应对：拆小步骤、减少当天目标、保留固定的休息时段。\n\n下一步建议：继续观察睡眠和任务密度对情绪的影响，每天只记录一个最想改善的问题。",
     dayKey: "2026-03-30",
     createdAt: "2026-03-30T09:15:00",
     isBatchChunk: false,
@@ -101,10 +101,9 @@ function splitAnalysisParagraphs(content: string): string[] {
 }
 
 function splitSuggestionLines(content: string): string[] {
-  return (content ?? "")
-    .split(/(?<=[；。])/)
-    .map((part) => part.trim())
-    .filter(Boolean);
+  const source = content ?? "";
+  const matches = source.match(/[^；。]+[；。]?/g);
+  return (matches ?? []).map((part) => part.trim()).filter(Boolean);
 }
 
 function extractHeadingBlock(paragraph: string): { heading: string; trailingContent: string } | null {
@@ -492,8 +491,12 @@ export function AnalysisPage() {
       return;
     }
 
-    setGenerating(true);
     setError(null);
+    if (todayCount && todayCount.count >= todayCount.limit) {
+      setPageNotice(`今日次数已达到上限 ${todayCount.limit}`);
+      return;
+    }
+    setGenerating(true);
     try {
       await generateAnalysis(session.accessToken, options);
       const snapshot = await loadAnalysisData();
@@ -501,7 +504,7 @@ export function AnalysisPage() {
         setPageNotice(ANALYSIS_SAMPLE_NOTICE);
       }
     } catch (generateError) {
-      setPageNotice(normalizeGenerateErrorMessage(generateError instanceof Error ? generateError.message : "生成失败"));
+      setPageNotice(normalizeGenerateErrorMessage(generateError instanceof Error ? generateError.message : "鐢熸垚澶辫触"));
     } finally {
       setGenerating(false);
     }
@@ -711,7 +714,7 @@ export function AnalysisPage() {
                       onClick={() => void handleDeleteAnalysis(analysis.id)}
                       type="button"
                     >
-                      ×
+                      &times;
                     </button>
                   </div>
                   <p className="data-task-card__meta">{formatDate(analysis.createdAt)}</p>
@@ -743,3 +746,4 @@ export function AnalysisPage() {
     </section>
   );
 }
+

@@ -25,6 +25,7 @@ type AuthContextValue = {
   updateProfile?: (profile: {
     username: string;
     gender: string;
+    age: string;
     city: string;
     phone: string;
     email: string;
@@ -151,6 +152,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
         const result = await updateCurrentUserProfile(session.accessToken, {
           username: profile.username.trim(),
           gender: profile.gender.trim() || null,
+          age: profile.age.trim() ? Number(profile.age.trim()) : null,
           city: profile.city.trim() || null,
           phone: profile.phone.trim() || null,
           email: profile.email.trim() || null,

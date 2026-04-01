@@ -31,12 +31,14 @@ class UserRepository:
         *,
         username: str,
         gender: str | None,
+        age: int | None,
         city: str | None,
         phone: str | None,
         email: str | None,
     ) -> User:
         user.username = username
         user.gender = gender
+        user.age = age
         user.city = city
         user.phone = phone
         user.email = email
