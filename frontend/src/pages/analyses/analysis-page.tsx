@@ -47,7 +47,7 @@ type AnalysisBlock =
 
 const AI_SUPPLEMENT_HEADING = "AI分析：";
 const NEXT_STEP_HEADING = "下一步建议：";
-const ANALYSIS_SAMPLE_NOTICE = "AI分析功能暂时关闭，目前生成的是样本数据";
+const ANALYSIS_DISABLED_NOTICE = "AI分析功能暂时关闭";
 
 const DEMO_ANALYSES: AnalysisItem[] = [
   {
@@ -184,6 +184,10 @@ function normalizeGenerateErrorMessage(message: string): string {
     return `今日次数已达到上限 ${limitMatch[1]}`;
   }
 
+  if (message === "AI analysis is currently disabled") {
+    return ANALYSIS_DISABLED_NOTICE;
+  }
+
   return message || "生成失败";
 }
 
@@ -222,10 +226,10 @@ export function AnalysisPage() {
   const initialLoadingStartedAtRef = useRef(Date.now());
 
   const isDemoMode = !backendReady || !session?.accessToken || !currentUser;
-  const visibleAnalyses = analyses.filter((analysis) => analysis.analysisType !== "batch_chunk");
+  const visibleAnalyses = (analyses ?? []).filter((analysis) => analysis.analysisType !== "batch_chunk");
   const availableTemplateOptions = useMemo(
     () =>
-      [...templates].sort((left, right) => {
+      [...(templates ?? [])].sort((left, right) => {
         if (left.isDefault !== right.isDefault) {
           return left.isDefault ? -1 : 1;
         }
@@ -499,6 +503,10 @@ export function AnalysisPage() {
     }
 
     setError(null);
+    if (todayCount && !todayCount.llmEnabled) {
+      setPageNotice(ANALYSIS_DISABLED_NOTICE);
+      return;
+    }
     if (todayCount && todayCount.count >= todayCount.limit) {
       setPageNotice(`今日次数已达到上限 ${todayCount.limit}`);
       return;
@@ -521,10 +529,7 @@ export function AnalysisPage() {
         throw new Error(currentTask.errorMessage || "生成失败");
       }
 
-      const snapshot = await loadAnalysisData();
-      if (snapshot.todayCount && !snapshot.todayCount.llmEnabled) {
-        setPageNotice(ANALYSIS_SAMPLE_NOTICE);
-      }
+      await loadAnalysisData();
     } catch (generateError) {
       setPageNotice(normalizeGenerateErrorMessage(generateError instanceof Error ? generateError.message : "鐢熸垚澶辫触"));
     } finally {
