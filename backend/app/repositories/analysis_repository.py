@@ -93,7 +93,7 @@ class AnalysisRepository:
         statement = (
             select(Record)
             .where(Record.user_id == user_id)
-            .order_by(Record.updated_at.desc(), Record.id.desc())
+            .order_by(Record.created_at.desc(), Record.id.desc())
             .limit(1)
         )
         return self.db.scalar(statement)
@@ -102,7 +102,7 @@ class AnalysisRepository:
         statement = (
             select(Record)
             .where(Record.user_id == user_id)
-            .order_by(Record.updated_at.desc())
+            .order_by(Record.created_at.asc(), Record.id.asc())
         )
         return list(self.db.scalars(statement).all())
 
