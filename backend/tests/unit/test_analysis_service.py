@@ -213,6 +213,19 @@ def test_generate_analysis_rejects_when_threshold_not_met(monkeypatch) -> None:
     assert exc.value.detail == "At least 2 records are required for analysis"
 
 
+def test_generate_analysis_rejects_when_llm_is_disabled(monkeypatch) -> None:
+    repository = StubAnalysisRepository()
+    repository.records = [make_record(1, 1, "x"), make_record(2, 1, "y")]
+    service = AnalysisService(repository, StubTemplateRepository())
+    monkeypatch.setattr(settings, "ANALYSIS_LLM_ENABLED", False)
+
+    with pytest.raises(HTTPException) as exc:
+        service.generate_analysis(1, AnalysisGenerateRequest(record_id=None, range_months=0))
+
+    assert exc.value.status_code == 400
+    assert exc.value.detail == "AI analysis is currently disabled"
+
+
 def test_generate_analysis_uses_llm_result_when_available(monkeypatch) -> None:
     repository = StubAnalysisRepository()
     repository.records = [make_record(1, 1, "x"), make_record(2, 1, "y")]

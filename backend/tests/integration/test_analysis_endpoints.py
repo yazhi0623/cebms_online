@@ -51,8 +51,7 @@ def test_generate_analysis_requires_threshold(client: TestClient, auth_headers: 
 def test_generate_analysis_does_not_append_to_record_and_updates_count(client: TestClient, auth_headers: dict[str, str], monkeypatch) -> None:
     monkeypatch.setattr(settings, "ANALYSIS_THRESHOLD", 2)
     monkeypatch.setattr(settings, "DAILY_ANALYSIS_LIMIT", 3)
-    monkeypatch.setattr(settings, "ANALYSIS_LLM_ENABLED", False)
-    monkeypatch.setattr(settings, "DAILY_ANALYSIS_LIMIT_WHEN_LLM_DISABLED", 3)
+    monkeypatch.setattr(settings, "ANALYSIS_LLM_ENABLED", True)
 
     latest_record_id = None
     for index in range(2):
@@ -74,7 +73,7 @@ def test_generate_analysis_does_not_append_to_record_and_updates_count(client: T
     assert count_payload["count"] == 1
     assert count_payload["limit"] == 3
     assert count_payload["threshold"] == 2
-    assert count_payload["llm_enabled"] is False
+    assert count_payload["llm_enabled"] is True
     assert count_payload["day_key"] == date.today().isoformat()
 
 
@@ -114,8 +113,8 @@ def test_analysis_task_generates_result_in_background(
     monkeypatch,
 ) -> None:
     monkeypatch.setattr(settings, "ANALYSIS_THRESHOLD", 2)
-    monkeypatch.setattr(settings, "ANALYSIS_LLM_ENABLED", False)
-    monkeypatch.setattr(settings, "DAILY_ANALYSIS_LIMIT_WHEN_LLM_DISABLED", 3)
+    monkeypatch.setattr(settings, "ANALYSIS_LLM_ENABLED", True)
+    monkeypatch.setattr(settings, "DAILY_ANALYSIS_LIMIT", 3)
 
     for index in range(2):
         response = client.post(
@@ -169,6 +168,45 @@ def test_analysis_task_marks_failure_without_breaking_creation_response(
     assert task["status"] == "failed"
     assert task["error_message"] == "At least 2 records are required for analysis"
     assert task["result_analysis_id"] is None
+
+
+def test_generate_analysis_rejects_when_llm_is_disabled(
+    client: TestClient,
+    auth_headers: dict[str, str],
+    monkeypatch,
+) -> None:
+    monkeypatch.setattr(settings, "ANALYSIS_LLM_ENABLED", False)
+
+    response = client.post(
+        "/api/v1/analyses/generate",
+        json={"range_months": 0},
+        headers=auth_headers,
+    )
+
+    assert response.status_code == 400
+    assert response.json()["detail"] == "AI analysis is currently disabled"
+
+
+def test_analysis_task_fails_when_llm_is_disabled(
+    client: TestClient,
+    auth_headers: dict[str, str],
+    monkeypatch,
+) -> None:
+    monkeypatch.setattr(settings, "ANALYSIS_LLM_ENABLED", False)
+
+    response = client.post(
+        "/api/v1/analyses/tasks",
+        json={"range_months": 0},
+        headers=auth_headers,
+    )
+
+    assert response.status_code == 201
+    task_id = response.json()["id"]
+
+    task_response = client.get(f"/api/v1/analyses/tasks/{task_id}", headers=auth_headers)
+    assert task_response.status_code == 200
+    assert task_response.json()["status"] == "failed"
+    assert task_response.json()["error_message"] == "AI analysis is currently disabled"
 
 
 def test_generate_analysis_by_template_only_uses_records_with_same_template(client: TestClient, auth_headers: dict[str, str], monkeypatch) -> None:

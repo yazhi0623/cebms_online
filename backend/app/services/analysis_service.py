@@ -75,6 +75,12 @@ class AnalysisService:
 
         这里会先校验记录数量门槛和每日次数限制，再决定走单次分析还是分批分析。
         """
+        if not settings.ANALYSIS_LLM_ENABLED:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="AI analysis is currently disabled",
+            )
+
         records = self.analysis_repository.list_records_for_user(user_id)
         template = None
         range_label = AnalysisSummaryService.range_label(payload.range_months)

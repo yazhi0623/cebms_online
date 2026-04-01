@@ -1,7 +1,12 @@
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { AnalysisPage } from "./analysis-page";
+
+const { createAnalysisTaskMock, fetchAnalysisTaskMock } = vi.hoisted(() => ({
+  createAnalysisTaskMock: vi.fn(),
+  fetchAnalysisTaskMock: vi.fn(),
+}));
 
 vi.mock("../../shared/hooks/use-auth", () => ({
   useAuth: () => ({
@@ -59,8 +64,8 @@ vi.mock("../../features/analysis/api", () => ({
     threshold: 10,
     llmEnabled: false,
   }),
-  createAnalysisTask: vi.fn(),
-  fetchAnalysisTask: vi.fn(),
+  createAnalysisTask: createAnalysisTaskMock,
+  fetchAnalysisTask: fetchAnalysisTaskMock,
   deleteAnalysis: vi.fn(),
 }));
 
@@ -109,6 +114,8 @@ vi.mock("../../shared/constants/storage", () => ({
 
 describe("AnalysisPage", () => {
   beforeEach(() => {
+    createAnalysisTaskMock.mockReset();
+    fetchAnalysisTaskMock.mockReset();
     Object.defineProperty(window, "matchMedia", {
       writable: true,
       value: vi.fn().mockImplementation(() => ({
@@ -136,5 +143,19 @@ describe("AnalysisPage", () => {
     expect(statCard).not.toBeNull();
     expect(within(statCard!).getByText("5")).toBeInTheDocument();
     expect(within(statCard!).queryByText("1")).not.toBeInTheDocument();
+  });
+
+  it("shows disabled notice and does not create a task when llm is disabled", async () => {
+    render(<AnalysisPage />);
+
+    await waitFor(() => {
+      expect(screen.queryByText("加载中...")).not.toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "--" }));
+    fireEvent.click(screen.getByRole("menuitem", { name: "近一个月" }));
+
+    expect(await screen.findByText("AI分析功能暂时关闭")).toBeInTheDocument();
+    expect(createAnalysisTaskMock).not.toHaveBeenCalled();
   });
 });
