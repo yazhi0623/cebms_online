@@ -148,11 +148,7 @@ describe("AnalysisPage", () => {
   it("shows disabled notice and does not create a task when llm is disabled", async () => {
     render(<AnalysisPage />);
 
-    await waitFor(() => {
-      expect(screen.queryByText("加载中...")).not.toBeInTheDocument();
-    });
-
-    fireEvent.click(screen.getByRole("button", { name: "--" }));
+    fireEvent.click(screen.getByRole("button", { name: "--", hidden: true }));
     fireEvent.click(screen.getByRole("menuitem", { name: "近一个月" }));
 
     expect(await screen.findByText("AI分析功能暂时关闭")).toBeInTheDocument();

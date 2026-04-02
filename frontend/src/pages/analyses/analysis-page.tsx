@@ -453,17 +453,17 @@ export function AnalysisPage() {
         fetchRecords(session.accessToken),
         fetchTemplates(session.accessToken),
       ]);
-      setAnalyses(nextAnalyses);
+      setAnalyses(nextAnalyses ?? []);
       setAggregate(nextAggregate);
       setTodayCount(nextTodayCount);
-      setRecords(nextRecords);
-      setTemplates(nextTemplates);
+      setRecords(nextRecords ?? []);
+      setTemplates(nextTemplates ?? []);
       saveAnalysisPreviewCache(currentUser.id, {
-        analyses: nextAnalyses.filter((analysis) => analysis.analysisType !== "batch_chunk"),
+        analyses: (nextAnalyses ?? []).filter((analysis) => analysis.analysisType !== "batch_chunk"),
         aggregate: nextAggregate,
         todayCount: nextTodayCount,
       });
-      saveTemplateListCache(currentUser.id, nextTemplates);
+      saveTemplateListCache(currentUser.id, nextTemplates ?? []);
       return { todayCount: nextTodayCount };
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : "加载数据失败");
