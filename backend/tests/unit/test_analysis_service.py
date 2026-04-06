@@ -7,6 +7,7 @@ from fastapi import HTTPException
 from app.core.config import settings
 from app.schemas.analysis import AnalysisCreate, AnalysisGenerateRequest
 from app.services.analysis_service import AnalysisService
+from app.services.llm_analysis_service import LLMAnalysisError
 from app.services.analysis_summary_service import AnalysisSummaryService
 
 
@@ -32,11 +33,34 @@ class StubLLMAnalysisService:
         return self.result
 
 
+class StubFailingLLMAnalysisService:
+    def __init__(self, status_code: int | None = None) -> None:
+        self.status_code = status_code
+        self.calls = []
+        self.summary_calls = []
+
+    def generate_analysis_text(self, records, range_label: str, user_profile_text: str | None = None) -> str | None:
+        self.calls.append({"records": records, "range_label": range_label, "user_profile_text": user_profile_text})
+        raise LLMAnalysisError(self.status_code)
+
+    def generate_summary_text(
+        self,
+        analysis_texts,
+        range_label: str,
+        user_profile_text: str | None = None,
+    ) -> str | None:
+        self.summary_calls.append(
+            {"analysis_texts": analysis_texts, "range_label": range_label, "user_profile_text": user_profile_text}
+        )
+        raise LLMAnalysisError(self.status_code)
+
+
 class StubAnalysisRepository:
     DELETED_ANALYSIS_CONTENT = "__DELETED_ANALYSIS__"
 
     def __init__(self) -> None:
         self.analyses = []
+        self.pending_analyses = []
         self.records = []
         self.deleted_analysis = None
         self.created_analysis = None
@@ -93,11 +117,19 @@ class StubAnalysisRepository:
             source_analysis_id=source_analysis_id,
         )
         self.analyses.append(analysis)
+        self.pending_analyses.append(analysis)
         self.created_analysis = analysis
         return analysis
 
     def commit_refresh(self, analysis):
+        self.pending_analyses.clear()
         return analysis
+
+    def rollback(self):
+        for analysis in self.pending_analyses:
+            if analysis in self.analyses:
+                self.analyses.remove(analysis)
+        self.pending_analyses.clear()
 
     def delete(self, analysis):
         self.deleted_analysis = analysis
@@ -242,6 +274,22 @@ def test_generate_analysis_uses_llm_result_when_available(monkeypatch) -> None:
     assert llm_service.calls[0]["range_label"] == "全部"
 
 
+def test_generate_analysis_does_not_create_or_count_when_llm_call_fails(monkeypatch) -> None:
+    repository = StubAnalysisRepository()
+    repository.records = [make_record(1, 1, "x"), make_record(2, 1, "y")]
+    llm_service = StubFailingLLMAnalysisService(503)
+    service = AnalysisService(repository, StubTemplateRepository(), llm_service)
+    monkeypatch.setattr(settings, "ANALYSIS_THRESHOLD", 2)
+
+    with pytest.raises(HTTPException) as exc:
+        service.generate_analysis(1, AnalysisGenerateRequest(record_id=None, range_months=0))
+
+    assert exc.value.status_code == 502
+    assert exc.value.detail == "无法调用大模型，状态码：503"
+    assert repository.analyses == []
+    assert service.today_analysis_count(1)["count"] == 0
+
+
 def test_generate_analysis_batches_large_datasets_and_returns_final_summary(monkeypatch) -> None:
     repository = StubAnalysisRepository()
     repository.records = [make_record(index, 1, f"content {index}") for index in range(1, 62)]
@@ -258,6 +306,22 @@ def test_generate_analysis_batches_large_datasets_and_returns_final_summary(monk
     assert "【分析范围】全部（汇总）" in result.content
     assert len(llm_service.calls) == 3
     assert llm_service.summary_calls[0]["range_label"] == "全部（汇总）"
+
+
+def test_generate_batched_analysis_rolls_back_chunk_rows_when_llm_call_fails(monkeypatch) -> None:
+    repository = StubAnalysisRepository()
+    repository.records = [make_record(index, 1, f"content {index}") for index in range(1, 62)]
+    llm_service = StubFailingLLMAnalysisService(429)
+    service = AnalysisService(repository, StubTemplateRepository(), llm_service)
+    monkeypatch.setattr(settings, "ANALYSIS_THRESHOLD", 2)
+
+    with pytest.raises(HTTPException) as exc:
+        service.generate_analysis(1, AnalysisGenerateRequest(record_id=None, range_months=0))
+
+    assert exc.value.status_code == 502
+    assert exc.value.detail == "无法调用大模型，状态码：429"
+    assert repository.analyses == []
+    assert service.today_analysis_count(1)["count"] == 0
 
 
 def test_create_analysis_rejects_when_daily_limit_reached(monkeypatch) -> None:

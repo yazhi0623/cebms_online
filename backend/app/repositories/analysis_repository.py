@@ -100,6 +100,10 @@ class AnalysisRepository:
         self.db.refresh(analysis)
         return analysis
 
+    def rollback(self) -> None:
+        """回滚当前会话里尚未提交的分析写入。"""
+        self.db.rollback()
+
     def delete(self, analysis: Analysis) -> None:
         """通过写入墓碑内容实现软删除。"""
         analysis.content = self.DELETED_ANALYSIS_CONTENT

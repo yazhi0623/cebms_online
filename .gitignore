@@ -11,6 +11,8 @@ generated/
 pytest-cache-files-*/
 AI合作改代码
 README.md
+准备.md
+models.jsonbak
 
 # --- 系统/IDE 垃圾 (预防权限占用报错) ---
 .idea/
