@@ -3,6 +3,7 @@ from datetime import date
 from fastapi.testclient import TestClient
 
 from app.core.config import settings
+from app.services.llm_analysis_service import LLMAnalysisError, LLMAnalysisService
 
 
 EMOTION_LABEL = "情绪分值(1~10)"
@@ -17,6 +18,14 @@ GRATITUDE_LABEL = "感恩"
 IMPROVEMENT_LABEL = "需要改进"
 OTHER_LABEL = "其他"
 RECORD_COUNT_TEXT = "本次纳入分析的记录数"
+
+
+def stub_analysis_result(range_label: str) -> str:
+    return f"【分析范围】{range_label}\n总体趋势：稳定。\n下一步建议：先完成一件小事。"
+
+
+def stub_summary_result(range_label: str) -> str:
+    return f"【分析范围】{range_label}\n总体趋势：整体稳定。\n下一步建议：延续当前节奏。"
 
 
 def build_record_content(index: int) -> str:
@@ -52,6 +61,11 @@ def test_generate_analysis_does_not_append_to_record_and_updates_count(client: T
     monkeypatch.setattr(settings, "ANALYSIS_THRESHOLD", 2)
     monkeypatch.setattr(settings, "DAILY_ANALYSIS_LIMIT", 3)
     monkeypatch.setattr(settings, "ANALYSIS_LLM_ENABLED", True)
+    monkeypatch.setattr(
+        LLMAnalysisService,
+        "generate_analysis_text",
+        lambda self, records, range_label, user_profile_text=None: stub_analysis_result(range_label),
+    )
 
     latest_record_id = None
     for index in range(2):
@@ -81,6 +95,16 @@ def test_batched_generate_analysis_counts_as_one_today_usage(client: TestClient,
     monkeypatch.setattr(settings, "ANALYSIS_THRESHOLD", 2)
     monkeypatch.setattr(settings, "DAILY_ANALYSIS_LIMIT", 1)
     monkeypatch.setattr(settings, "ANALYSIS_LLM_ENABLED", True)
+    monkeypatch.setattr(
+        LLMAnalysisService,
+        "generate_analysis_text",
+        lambda self, records, range_label, user_profile_text=None: stub_analysis_result(range_label),
+    )
+    monkeypatch.setattr(
+        LLMAnalysisService,
+        "generate_summary_text",
+        lambda self, analysis_texts, range_label, user_profile_text=None: stub_summary_result(range_label),
+    )
 
     for index in range(31):
         response = client.post(
@@ -115,6 +139,11 @@ def test_analysis_task_generates_result_in_background(
     monkeypatch.setattr(settings, "ANALYSIS_THRESHOLD", 2)
     monkeypatch.setattr(settings, "ANALYSIS_LLM_ENABLED", True)
     monkeypatch.setattr(settings, "DAILY_ANALYSIS_LIMIT", 3)
+    monkeypatch.setattr(
+        LLMAnalysisService,
+        "generate_analysis_text",
+        lambda self, records, range_label, user_profile_text=None: stub_analysis_result(range_label),
+    )
 
     for index in range(2):
         response = client.post(
@@ -209,9 +238,95 @@ def test_analysis_task_fails_when_llm_is_disabled(
     assert task_response.json()["error_message"] == "AI analysis is currently disabled"
 
 
+def test_generate_analysis_does_not_create_record_or_count_when_llm_call_fails(
+    client: TestClient,
+    auth_headers: dict[str, str],
+    monkeypatch,
+) -> None:
+    monkeypatch.setattr(settings, "ANALYSIS_THRESHOLD", 2)
+    monkeypatch.setattr(settings, "ANALYSIS_LLM_ENABLED", True)
+    monkeypatch.setattr(
+        LLMAnalysisService,
+        "generate_analysis_text",
+        lambda self, records, range_label, user_profile_text=None: (_ for _ in ()).throw(LLMAnalysisError(503)),
+    )
+
+    for index in range(2):
+        response = client.post(
+            "/api/v1/records",
+            json={"title": f"Fail Record {index}", "content": build_record_content(index)},
+            headers=auth_headers,
+        )
+        assert response.status_code == 201
+
+    generate_response = client.post("/api/v1/analyses/generate", json={"range_months": 0}, headers=auth_headers)
+
+    assert generate_response.status_code == 502
+    assert generate_response.json()["detail"] == "无法调用大模型，状态码：503"
+
+    list_response = client.get("/api/v1/analyses", headers=auth_headers)
+    assert list_response.status_code == 200
+    assert list_response.json() == []
+
+    count_response = client.get("/api/v1/analyses/count/today", headers=auth_headers)
+    assert count_response.status_code == 200
+    assert count_response.json()["count"] == 0
+
+
+def test_analysis_task_does_not_create_record_or_count_when_llm_call_fails(
+    client: TestClient,
+    auth_headers: dict[str, str],
+    monkeypatch,
+) -> None:
+    monkeypatch.setattr(settings, "ANALYSIS_THRESHOLD", 2)
+    monkeypatch.setattr(settings, "ANALYSIS_LLM_ENABLED", True)
+    monkeypatch.setattr(
+        LLMAnalysisService,
+        "generate_analysis_text",
+        lambda self, records, range_label, user_profile_text=None: (_ for _ in ()).throw(LLMAnalysisError(429)),
+    )
+
+    for index in range(2):
+        response = client.post(
+            "/api/v1/records",
+            json={"title": f"Task Fail Record {index}", "content": build_record_content(index)},
+            headers=auth_headers,
+        )
+        assert response.status_code == 201
+
+    create_task_response = client.post(
+        "/api/v1/analyses/tasks",
+        json={"range_months": 0},
+        headers=auth_headers,
+    )
+
+    assert create_task_response.status_code == 201
+    task_id = create_task_response.json()["id"]
+
+    task_response = client.get(f"/api/v1/analyses/tasks/{task_id}", headers=auth_headers)
+    assert task_response.status_code == 200
+    task_payload = task_response.json()
+    assert task_payload["status"] == "failed"
+    assert task_payload["error_message"] == "无法调用大模型，状态码：429"
+    assert task_payload["result_analysis_id"] is None
+
+    list_response = client.get("/api/v1/analyses", headers=auth_headers)
+    assert list_response.status_code == 200
+    assert list_response.json() == []
+
+    count_response = client.get("/api/v1/analyses/count/today", headers=auth_headers)
+    assert count_response.status_code == 200
+    assert count_response.json()["count"] == 0
+
+
 def test_generate_analysis_by_template_only_uses_records_with_same_template(client: TestClient, auth_headers: dict[str, str], monkeypatch) -> None:
     monkeypatch.setattr(settings, "ANALYSIS_THRESHOLD", 2)
     monkeypatch.setattr(settings, "DAILY_ANALYSIS_LIMIT", 3)
+    monkeypatch.setattr(
+        LLMAnalysisService,
+        "generate_analysis_text",
+        lambda self, records, range_label, user_profile_text=None: stub_analysis_result(range_label),
+    )
 
     template_response = client.post(
         "/api/v1/templates",

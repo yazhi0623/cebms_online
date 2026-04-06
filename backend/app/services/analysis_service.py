@@ -9,7 +9,7 @@ from app.repositories.analysis_repository import AnalysisRepository
 from app.repositories.template_repository import TemplateRepository
 from app.schemas.analysis import AnalysisCreate, AnalysisGenerateRequest
 from app.services.analysis_summary_service import AnalysisSummaryService
-from app.services.llm_analysis_service import LLMAnalysisService
+from app.services.llm_analysis_service import LLMAnalysisService, LLMAnalysisError
 from app.services.weather_service import WeatherService
 
 
@@ -104,26 +104,38 @@ class AnalysisService:
 
         day_key = date.today()
         self._ensure_daily_limit(user_id, day_key)
-        if len(records) > self.BATCH_SIZE:
-            return self._generate_batched_analysis(
-                user_id,
-                payload.record_id,
-                payload.template_id,
-                records,
-                range_label,
-                day_key,
-                current_user,
-            )
+        try:
+            if len(records) > self.BATCH_SIZE:
+                analysis = self._generate_batched_analysis(
+                    user_id,
+                    payload.record_id,
+                    payload.template_id,
+                    records,
+                    range_label,
+                    day_key,
+                    current_user,
+                )
+            else:
+                analysis = self._generate_single_analysis(
+                    user_id,
+                    payload.record_id,
+                    payload.template_id,
+                    records,
+                    range_label,
+                    day_key,
+                    current_user,
+                )
+        except LLMAnalysisError as exc:
+            self.analysis_repository.rollback()
+            raise HTTPException(
+                status_code=status.HTTP_502_BAD_GATEWAY,
+                detail=str(exc),
+            ) from exc
+        except Exception:
+            self.analysis_repository.rollback()
+            raise
 
-        return self._generate_single_analysis(
-            user_id,
-            payload.record_id,
-            payload.template_id,
-            records,
-            range_label,
-            day_key,
-            current_user,
-        )
+        return self.analysis_repository.commit_refresh(analysis)
 
     def _generate_single_analysis(
         self,
@@ -224,7 +236,8 @@ class AnalysisService:
                 raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Template not found")
 
         self._ensure_daily_limit(user_id, analysis_in.day_key)
-        return self._create_analysis_unchecked(user_id, analysis_in)
+        analysis = self._create_analysis_unchecked(user_id, analysis_in)
+        return self.analysis_repository.commit_refresh(analysis)
 
     def delete_analysis(self, analysis_id: int, user_id: int) -> None:
         analysis = self.analysis_repository.get_by_id_for_user(analysis_id, user_id)

@@ -18,6 +18,15 @@ except ImportError:  # pragma: no cover
     OpenAI = None
 
 
+class LLMAnalysisError(Exception):
+    """Raised when the remote LLM cannot be called successfully."""
+
+    def __init__(self, status_code: int | None) -> None:
+        self.status_code = status_code
+        label = str(status_code) if isinstance(status_code, int) else "未知"
+        super().__init__(f"无法调用大模型，状态码：{label}")
+
+
 class LLMAnalysisService:
     """Generate analysis text with remote LLMs when enabled."""
 
@@ -63,20 +72,24 @@ class LLMAnalysisService:
     def _run_prompt(self, prompt: str, payload: dict[str, Any]) -> str | None:
         models = self._get_ordered_models(payload)
         if not models:
-            return None
+            raise LLMAnalysisError(None)
+
+        last_status_code: int | None = None
 
         for model in models:
             response = self._call_model(model["name"], prompt)
             if response["ok"]:
                 return response["content"]
 
+            last_status_code = response["status_code"]
+
             if self._should_switch_model(response["status_code"]):
                 self._switch_model(payload, model["name"], response["status_code"])
                 continue
 
-            return None
+            raise LLMAnalysisError(response["status_code"])
 
-        return None
+        raise LLMAnalysisError(last_status_code)
 
     def _call_model(self, model_name: str, prompt: str) -> dict[str, Any]:
         client = self._build_client(model_name)
